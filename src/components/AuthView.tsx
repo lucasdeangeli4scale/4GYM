@@ -108,14 +108,8 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
           email: sanitizedEmail,
           inviteCode: personalInviteCode,
           avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80`, // Default sporty avatar placeholder
-          weightRecords: [
-            { 
-              id: "rec_initial_" + Date.now(), 
-              weight: 75, 
-              height: 1.75, 
-              date: new Date().toISOString() 
-            }
-          ]
+          weightRecords: [],
+          onboarded: false
         });
 
         if (user.email) {

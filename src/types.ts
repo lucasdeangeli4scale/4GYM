@@ -32,6 +32,7 @@ export interface UserProfile {
   avatar?: string;
   weightRecords: WeightRecord[];
   inviteCode?: string;
+  onboarded?: boolean;
 }
 
 export interface TeamMember {

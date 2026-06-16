@@ -13,6 +13,7 @@ interface DesafiosViewProps {
   posts: GymPost[];
   currentUserEmail: string;
   currentUserName: string;
+  teamMembers?: TeamMember[];
 }
 
 // Days of the week in PT-BR, matching standard index pattern (1 = Monday, ..., 0 = Sunday)
@@ -30,14 +31,15 @@ export default function DesafiosView({
   posts,
   currentUserEmail,
   currentUserName,
+  teamMembers,
 }: DesafiosViewProps) {
   // Merge current user with preset roster members
-  const allMembers = DEFAULT_MEMBERS.map((member) => {
-    if (member.id === "lucas_me") {
+  const list = teamMembers && teamMembers.length > 0 ? teamMembers : DEFAULT_MEMBERS;
+  const allMembers = list.map((member) => {
+    if (member.email.toLowerCase() === currentUserEmail.toLowerCase()) {
       return {
         ...member,
         name: currentUserName,
-        email: currentUserEmail,
       };
     }
     return member;

@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { GymPost, UserProfile, WeightRecord } from "./types";
-import { SEED_POSTS } from "./data";
+import { GymPost, UserProfile, WeightRecord, TeamMember, MonthPrize } from "./types";
+import { SEED_POSTS, DEFAULT_MEMBERS, MONTH_PRIZE } from "./data";
 import TimelineView from "./components/TimelineView";
 import DesafiosView from "./components/DesafiosView";
 import PerfilView from "./components/PerfilView";
 import PostModal from "./components/PostModal";
 import AuthView from "./components/AuthView";
+import OnboardingView from "./components/OnboardingView";
 import { Dumbbell, Trophy, User, RotateCcw, HelpCircle, Flame, Dumbbell as DumbbellIcon, ShieldCheck, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -37,7 +38,8 @@ const INITIAL_PROFILE: UserProfile = {
     { id: "rec_2", weight: 79.2, height: 1.82, date: "2026-06-01T08:00:00.000Z" },
     { id: "rec_3", weight: 80.5, height: 1.82, date: "2026-05-15T08:00:00.000Z" }
   ],
-  inviteCode: "461011"
+  inviteCode: "461011",
+  onboarded: true
 };
 
 export default function App() {
@@ -47,6 +49,10 @@ export default function App() {
   // Auth states
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // Dynamic real-time synchronized collections from db
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [monthPrize, setMonthPrize] = useState<MonthPrize>(MONTH_PRIZE);
 
   // State for loaded posts
   const [posts, setPosts] = useState<GymPost[]>(() => {
@@ -84,12 +90,147 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Synchronize users/team roster from Firestore in real-time
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "users"),
+      (snapshot) => {
+        const membersList: TeamMember[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          membersList.push({
+            id: docSnap.id,
+            name: data.name || "",
+            email: data.email || docSnap.id,
+            avatar: data.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+          });
+        });
+
+        // Seed default team roster if collection is completely empty
+        if (membersList.length === 0) {
+          const seedRoster = async () => {
+            const defaultRoster = [
+              {
+                name: "Alex Mercer",
+                email: "lucas_deangeli@4scale.com.br",
+                avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
+                inviteCode: "461011"
+              },
+              {
+                name: "Marcus Thorne",
+                email: "marcus.thorne@4scale.com.br",
+                avatar: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=150&auto=format&fit=crop&q=80",
+                inviteCode: "123456"
+              },
+              {
+                name: "Elena Silva",
+                email: "elena.silva@4scale.com.br",
+                avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+                inviteCode: "555000"
+              },
+              {
+                name: "Juliana Lima",
+                email: "juliana.lima@4scale.com.br",
+                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+                inviteCode: "888444"
+              }
+            ];
+
+            for (const m of defaultRoster) {
+              const uDocRef = doc(db, "users", m.email);
+              await setDoc(uDocRef, {
+                name: m.name,
+                email: m.email,
+                avatar: m.avatar,
+                inviteCode: m.inviteCode,
+                weightRecords: m.email === "lucas_deangeli@4scale.com.br" ? INITIAL_PROFILE.weightRecords : [],
+                onboarded: true
+              });
+            }
+          };
+          seedRoster().catch((err) => console.warn("Failed to seed dynamic members:", err));
+        } else {
+          setTeamMembers(membersList);
+        }
+      },
+      (error) => {
+        console.warn("Firestore users sync failed:", error);
+      }
+    );
+    return () => unsubscribe();
+  }, [userProfile.email]);
+
+  // Synchronize monthly reward config details from Firestore config document in real-time
+  useEffect(() => {
+    const prizeDocRef = doc(db, "config", "monthPrize");
+    const unsubscribe = onSnapshot(
+      prizeDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setMonthPrize({
+            title: data.title || MONTH_PRIZE.title,
+            imageUrl: data.imageUrl || MONTH_PRIZE.imageUrl,
+            description: data.description || MONTH_PRIZE.description,
+            details: data.details || MONTH_PRIZE.details,
+          });
+        } else {
+          setDoc(prizeDocRef, {
+            title: MONTH_PRIZE.title,
+            imageUrl: MONTH_PRIZE.imageUrl,
+            description: MONTH_PRIZE.description,
+            details: MONTH_PRIZE.details,
+          }).catch((err) => console.warn("Failed to seed dynamic prize configuration:", err));
+        }
+      },
+      (error) => {
+        console.warn("Firestore config sync failed:", error);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);
       setCurrentUserEmail(null);
     } catch (e) {
       console.error("Erro ao deslogar:", e);
+    }
+  };
+
+  const handleCompleteOnboarding = async (weight: number, height: number) => {
+    const initialRecord: WeightRecord = {
+      id: "rec_initial_" + Date.now(),
+      weight,
+      height,
+      date: new Date().toISOString(),
+    };
+
+    const updatedProfile: UserProfile = {
+      ...userProfile,
+      weightRecords: [initialRecord],
+      onboarded: true,
+    };
+
+    setUserProfile(updatedProfile);
+    localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(updatedProfile));
+
+    if (useLocalFallback) return;
+
+    try {
+      await updateDoc(doc(db, "users", userProfile.email), {
+        weightRecords: [initialRecord],
+        onboarded: true,
+      });
+      await setDoc(doc(db, "users", userProfile.email, "weightRecords", initialRecord.id), {
+        id: initialRecord.id,
+        weight: initialRecord.weight,
+        height: initialRecord.height,
+        date: initialRecord.date,
+      });
+    } catch (e) {
+      console.warn("Firestore complete onboarding failed, relying on local simulation", e);
     }
   };
 
@@ -231,11 +372,12 @@ export default function App() {
             avatar: data.avatar || INITIAL_PROFILE.avatar,
             weightRecords: data.weightRecords || [],
             inviteCode: codeValue,
+            onboarded: data.onboarded !== undefined ? data.onboarded : ((data.weightRecords && data.weightRecords.length > 0) ? true : false),
           });
         } else {
           // If profile doc doesn't exist yet, we can create it in Firestore
           const freshCode = Math.floor(100000 + Math.random() * 900000).toString();
-          setDoc(userDocRef, { ...INITIAL_PROFILE, inviteCode: freshCode })
+          setDoc(userDocRef, { ...INITIAL_PROFILE, inviteCode: freshCode, onboarded: false, weightRecords: [] })
             .catch((e) => console.warn("Failed to write users profile on Firestore:", e));
         }
         setUseLocalFallback(false);
@@ -642,83 +784,8 @@ export default function App() {
   const mockTeamGoalPercent = 72;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-slate-100 flex flex-col md:flex-row items-center justify-center p-0 md:p-6 font-sans selection:bg-violet-500/20 selection:text-violet-300">
+    <div className="min-h-screen bg-[#0A0A0A] text-slate-100 flex items-center justify-center p-0 md:p-6 font-sans selection:bg-violet-500/20 selection:text-violet-300">
       
-      {/* SIDEBAR DASHBOARD DETAILS (ONLY VISIBLE ON DESKTOP SCREEN RESOLUTION) */}
-      <div className="hidden lg:flex flex-col max-w-sm mr-8 my-auto space-y-6 text-slate-400">
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[#111111] border border-slate-800 rounded-2xl shadow-sm">
-              <DumbbellIcon className="w-8 h-8 text-violet-500 stroke-[1.8]" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-                4GYM <span className="text-violet-500 text-sm font-mono ml-2">// V1.0</span>
-              </h1>
-              <p className="text-xs uppercase tracking-widest text-slate-500 font-bold font-mono">
-                Corporate Tracker
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Team Goal Card (from Bento Grid HTML template) */}
-        <div className="bg-[#111111] border border-slate-800 rounded-3xl p-5 space-y-3.5">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-slate-400 font-mono">META COLETIVA DA EQUIPE</span>
-            <span className="text-xs font-bold text-violet-500">{mockTeamGoalPercent}%</span>
-          </div>
-          <div className="w-full h-2.5 bg-[#1A1A1A] rounded-full overflow-hidden border border-slate-800">
-            <div 
-              className="h-full bg-violet-500 rounded-full transition-all duration-1000" 
-              style={{ width: `${mockTeamGoalPercent}%` }}
-            />
-          </div>
-          <p className="text-[11px] text-slate-500 leading-normal">
-            Meta conjunta baseada em frequência regular planejada para a semana.
-          </p>
-        </div>
-
-        <div className="bg-[#111111] border border-slate-800 rounded-3xl p-5 space-y-3">
-          <h2 className="text-sm font-bold text-slate-200 font-display flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-violet-500" /> Ferramentas do Sandbox
-          </h2>
-          <p className="text-xs leading-relaxed text-slate-400">
-            Simule facilmente o estado de "Mural Vazio" ou reabilite a equipe de treinos fictícios para testar o painel interativo.
-          </p>
-
-          <div className="grid grid-cols-2 gap-2.5 pt-2">
-            <button
-              onClick={handleClearAllPosts}
-              className="bg-[#1A1A1A] hover:bg-slate-800/80 border border-slate-800 text-rose-400 hover:text-rose-300 py-2.5 px-3 rounded-2xl text-xs font-semibold cursor-pointer transition-all inline-flex items-center justify-center gap-1.5"
-              title="Permite testar a tela de Timeline vazia conforme regulação de metas do briefing."
-            >
-              Excluir Tudo
-            </button>
-            <button
-              onClick={handleLoadDemoData}
-              className="bg-[#1A1A1A] hover:bg-slate-800/80 border border-slate-800 text-violet-550 hover:text-violet-400 py-2.5 px-3 rounded-2xl text-xs font-semibold cursor-pointer transition-all inline-flex items-center justify-center gap-1.5"
-              title="Carrega treinos fictícios de outros membros da equipe."
-            >
-              Fazer Seed
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-[#111111] border border-slate-800 p-5 rounded-3xl text-[11px] leading-relaxed space-y-2.5 font-mono text-slate-500">
-          <p className="font-semibold text-slate-300 flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${useLocalFallback ? "bg-amber-500" : "bg-emerald-500"} animate-pulse`} />
-            Status de Conexão
-          </p>
-          <p>
-            • Banco de Dados: <span className={`${useLocalFallback ? "text-amber-400" : "text-emerald-400"} font-bold`}>{useLocalFallback ? "LocalStorage Failover" : "Firebase Firestore (Ativo)"}</span>
-          </p>
-          <p>
-            • Sincronização: <span className="text-violet-400 font-bold">{useLocalFallback ? "Local (Navegador)" : "Tempo Real (Nuvem)"}</span>
-          </p>
-        </div>
-      </div>
-
       {/* MOBILE SMARTPHONE SIMULATOR CONTAINER WRAPPER */}
       <div 
         className="w-full md:max-w-[412px] md:h-[844px] bg-[#0A0A0A] md:rounded-[40px] md:border-[10px] md:border-[#111111] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] relative flex flex-col overflow-hidden aspect-auto border-slate-850"
@@ -747,6 +814,12 @@ export default function App() {
           </div>
         ) : !currentUserEmail ? (
           <AuthView onAuthSuccess={(email) => setCurrentUserEmail(email)} />
+        ) : !userProfile.onboarded ? (
+          <OnboardingView
+            userName={userProfile.name}
+            onComplete={handleCompleteOnboarding}
+            onSignOut={handleSignOut}
+          />
         ) : (
           <>
             {/* Dynamic Screen View Changer */}
@@ -759,6 +832,7 @@ export default function App() {
                   currentUserEmail={userProfile.email}
                   onLikePost={handleLikePost}
                   onAddComment={handleAddComment}
+                  teamMembers={teamMembers}
                 />
               )}
 
@@ -767,6 +841,7 @@ export default function App() {
                   posts={posts}
                   currentUserEmail={userProfile.email}
                   currentUserName={userProfile.name}
+                  teamMembers={teamMembers}
                 />
               )}
 
@@ -778,6 +853,8 @@ export default function App() {
                   onAddWeightRecord={handleAddWeightRecord}
                   onDeleteWeightRecord={handleDeleteWeightRecord}
                   onSignOut={handleSignOut}
+                  monthPrize={monthPrize}
+                  teamMembers={teamMembers}
                 />
               )}
             </div>
@@ -839,24 +916,6 @@ export default function App() {
           onClose={() => setIsAddPostOpen(false)}
           onSubmitPost={handleAddPost}
         />
-      </div>
-
-      {/* QUICK FLOATING CONFIG BAR (ONLY VISIBLE ON MOBILE OR IF SIDEBAR IS COVERED/HIDDEN) */}
-      <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2">
-        <button
-          onClick={handleClearAllPosts}
-          className="bg-[#111111] border border-slate-800 text-rose-450 py-2 px-3 rounded-full text-[10px] font-bold shadow-xl flex items-center gap-1.5 cursor-pointer hover:bg-[#1a1a1a]"
-          title="Mural vazio"
-        >
-          <RotateCcw className="w-3.5 h-3.5" /> Limpar
-        </button>
-        <button
-          onClick={handleLoadDemoData}
-          className="bg-[#111111] border border-slate-800 text-violet-400 py-2 px-3 rounded-full text-[10px] font-bold shadow-xl flex items-center gap-1.5 cursor-pointer hover:bg-[#1a1a1a]"
-          title="Seedar equipe"
-        >
-          <Flame className="w-3.5 h-3.5" /> Seedar
-        </button>
       </div>
 
     </div>

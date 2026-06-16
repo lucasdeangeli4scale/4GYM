@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { GymPost } from "../types";
+import { GymPost, TeamMember } from "../types";
 import { 
   Dumbbell, 
   Bell, 
@@ -25,6 +25,7 @@ interface TimelineViewProps {
   currentUserEmail: string;
   onLikePost?: (id: string) => void;
   onAddComment?: (id: string, text: string) => void;
+  teamMembers?: TeamMember[];
 }
 
 export default function TimelineView({
@@ -34,6 +35,7 @@ export default function TimelineView({
   currentUserEmail,
   onLikePost,
   onAddComment,
+  teamMembers,
 }: TimelineViewProps) {
   // Sort posts by date, latest first
   const sortedPosts = [...posts].sort(
@@ -124,7 +126,8 @@ export default function TimelineView({
 
   // Find avatar helper
   const getMemberAvatar = (email: string, name: string) => {
-    const member = DEFAULT_MEMBERS.find(m => m.email.toLowerCase() === email.toLowerCase());
+    const list = teamMembers && teamMembers.length > 0 ? teamMembers : DEFAULT_MEMBERS;
+    const member = list.find(m => m.email.toLowerCase() === email.toLowerCase());
     if (member?.avatar) return member.avatar;
     // Fallback based on name or safe avatar
     if (name.includes("Marcus")) {

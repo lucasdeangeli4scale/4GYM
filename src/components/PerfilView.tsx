@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { UserProfile, GymPost, Trophy, WeightRecord } from "../types";
+import { UserProfile, GymPost, Trophy, WeightRecord, MonthPrize, TeamMember } from "../types";
 import { DEFAULT_TROPHIES, MONTH_PRIZE } from "../data";
 import {
   Trophy as TrophyIcon,
@@ -35,6 +35,8 @@ interface PerfilViewProps {
   onAddWeightRecord: (weight: number, height: number) => void;
   onDeleteWeightRecord?: (id: string) => void;
   onSignOut?: () => void;
+  monthPrize?: MonthPrize;
+  teamMembers?: TeamMember[];
 }
 
 export default function PerfilView({
@@ -44,7 +46,10 @@ export default function PerfilView({
   onAddWeightRecord,
   onDeleteWeightRecord,
   onSignOut,
+  monthPrize,
+  teamMembers,
 }: PerfilViewProps) {
+  const activePrize = monthPrize || MONTH_PRIZE;
   // State for editing profile info
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editedName, setEditedName] = useState(userProfile.name);
@@ -54,6 +59,7 @@ export default function PerfilView({
   const [isAddingRecord, setIsAddingRecord] = useState(false);
   const [newWeight, setNewWeight] = useState("");
   const [newHeight, setNewHeight] = useState("");
+  const [recordError, setRecordError] = useState<string | null>(null);
 
   // State for viewing historical records modal
   const [isViewingHistory, setIsViewingHistory] = useState(false);
@@ -69,10 +75,25 @@ export default function PerfilView({
   const records = userProfile.weightRecords || [];
   const latestRecord = records.length > 0 ? records[0] : { weight: 78.5, height: 1.82, date: new Date().toISOString() };
 
+  // Helpers to normalize and format height/IMC metrics
+  const getHeightInMeters = (h: number) => {
+    if (!h) return 0;
+    return h < 10 ? h : h / 100;
+  };
+
+  const formatHeight = (h: number) => {
+    if (!h) return "---";
+    const cmValue = h < 10 ? h * 105 : h; // Keep ratio safe if legacy conversion is around 100
+    // Actually safe conversion ratio is 100
+    const finalCm = h < 10 ? h * 100 : h;
+    return `${Math.round(finalCm)} cm`;
+  };
+
   // Calculate IMC
   const weight = latestRecord.weight;
   const height = latestRecord.height;
-  const imc = height > 0 ? Number((weight / (height * height)).toFixed(1)) : 0;
+  const heightInMeters = getHeightInMeters(height);
+  const imc = heightInMeters > 0 ? Number((weight / (heightInMeters * heightInMeters)).toFixed(1)) : 0;
 
   // Determine IMC Status and Color (Porting to Violet & Rose themes)
   let imcStatus = "Saudável";
@@ -169,14 +190,21 @@ export default function PerfilView({
 
   const handleRegisterRecord = (e: React.FormEvent) => {
     e.preventDefault();
+    setRecordError(null);
     const w = parseFloat(newWeight);
     const h = parseFloat(newHeight);
-    if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
-      onAddWeightRecord(w, h);
-      setIsAddingRecord(false);
-      setNewWeight("");
-      setNewHeight("");
+    if (isNaN(w) || w < 30 || w > 300) {
+      setRecordError("Por favor, insira um peso válido entre 30kg e 300kg.");
+      return;
     }
+    if (isNaN(h) || h < 100 || h > 250) {
+      setRecordError("Por favor, insira uma altura em centímetros com exatamente 3 dígitos (Ex: 182).");
+      return;
+    }
+    onAddWeightRecord(w, h / 100);
+    setIsAddingRecord(false);
+    setNewWeight("");
+    setNewHeight("");
   };
 
   const formatDate = (isoString: string) => {
@@ -325,8 +353,8 @@ export default function PerfilView({
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#202020] bg-zinc-900 flex-shrink-0 relative">
               <img
-                src={MONTH_PRIZE.imageUrl}
-                alt={MONTH_PRIZE.title}
+                src={activePrize.imageUrl}
+                alt={activePrize.title}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
@@ -334,10 +362,10 @@ export default function PerfilView({
 
             <div className="min-w-0 flex-1">
               <h4 className="font-bold text-white text-sm tracking-tight leading-snug">
-                {MONTH_PRIZE.title}
+                {activePrize.title}
               </h4>
               <p className="text-xs text-slate-400 line-clamp-1 mt-1 leading-normal">
-                {MONTH_PRIZE.description}
+                {activePrize.description}
               </p>
             </div>
           </div>
@@ -363,7 +391,7 @@ export default function PerfilView({
           </div>
 
           <p className="text-[11px] text-slate-500 mb-6 block font-sans">
-            Peso Ativo: <strong className="text-white">{weight} kg</strong> • Altura: <strong className="text-white">{height} m</strong>
+            Peso Ativo: <strong className="text-white">{weight} kg</strong> • Altura: <strong className="text-white">{formatHeight(height)}</strong>
           </p>
 
           {/* Dynamic IMC ruler container */}
@@ -409,7 +437,7 @@ export default function PerfilView({
               Registros Históricos
             </h4>
             <button
-              onClick={() => setIsAddingRecord(true)}
+              onClick={() => { setIsAddingRecord(true); setRecordError(null); }}
               className="text-xs text-violet-400 hover:text-white font-bold inline-flex items-center gap-1.5 cursor-pointer bg-violet-500/10 hover:bg-violet-500/15 px-3 py-1.5 rounded-xl border border-violet-500/15 transition-all"
             >
               <PlusCircle className="w-3.5 h-3.5" /> Adicionar
@@ -427,18 +455,19 @@ export default function PerfilView({
                   <tr className="bg-[#111111] border-b border-[#202020] text-slate-500 text-[10px] uppercase font-bold">
                     <th className="py-2.5 px-4">Data</th>
                     <th className="py-2.5 px-4 font-sans">Peso (kg)</th>
-                    <th className="py-2.5 px-4">Altura (m)</th>
+                    <th className="py-2.5 px-4">Altura</th>
                     <th className="py-2.5 px-4 text-center">IMC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {records.slice(0, 3).map((rec) => {
-                    const localImc = Number((rec.weight / (rec.height * rec.height)).toFixed(1));
+                    const localHeightM = getHeightInMeters(rec.height);
+                    const localImc = localHeightM > 0 ? Number((rec.weight / (localHeightM * localHeightM)).toFixed(1)) : 0;
                     return (
                       <tr key={rec.id} className="hover:bg-zinc-900/40">
                         <td className="py-2.5 px-4">{formatDate(rec.date)}</td>
                         <td className="py-2.5 px-4">{rec.weight} kg</td>
-                        <td className="py-2.5 px-4">{rec.height} m</td>
+                        <td className="py-2.5 px-4">{formatHeight(rec.height)}</td>
                         <td className="py-2.5 px-4 text-center">
                           <span className="px-2 py-0.5 rounded-md font-bold bg-[#111111] border border-zinc-800 text-violet-400 text-[10px]">
                             {localImc}
@@ -538,14 +567,14 @@ export default function PerfilView({
                   Premiação Mensal
                 </span>
                 <h3 className="font-extrabold text-base text-white tracking-tight">
-                  {MONTH_PRIZE.title}
+                  {activePrize.title}
                 </h3>
               </div>
 
               <div className="rounded-xl overflow-hidden aspect-square border border-[#202020] bg-zinc-900">
                 <img
-                  src={MONTH_PRIZE.imageUrl}
-                  alt={MONTH_PRIZE.title}
+                  src={activePrize.imageUrl}
+                  alt={activePrize.title}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
@@ -556,7 +585,7 @@ export default function PerfilView({
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" /> Como conquistar o kit:
                 </p>
                 <div className="text-xs text-slate-400 bg-black p-3.5 rounded-xl border border-zinc-900 leading-relaxed">
-                  {MONTH_PRIZE.details}
+                  {activePrize.details}
                 </div>
               </div>
 
@@ -600,6 +629,12 @@ export default function PerfilView({
                 </h3>
               </div>
 
+              {recordError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/15 text-rose-450 rounded-xl text-[10.5px] text-center font-medium">
+                  {recordError}
+                </div>
+              )}
+
               <form onSubmit={handleRegisterRecord} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-400 block mb-1.5">
@@ -618,14 +653,15 @@ export default function PerfilView({
 
                 <div>
                   <label className="text-xs font-semibold text-slate-400 block mb-1.5">
-                    Altura atual (em metros)
+                    Altura atual (em cm)
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Ex: 1.82"
+                    type="text"
+                    maxLength={3}
+                    inputMode="numeric"
+                    placeholder="Ex: 182"
                     value={newHeight}
-                    onChange={(e) => setNewHeight(e.target.value)}
+                    onChange={(e) => setNewHeight(e.target.value.replace(/[^0-9]/g, ""))}
                     className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-650 focus:border-violet-400 outline-none"
                     required
                   />
@@ -695,7 +731,8 @@ export default function PerfilView({
                   </div>
                 ) : (
                   records.map((rec) => {
-                    const localImc = Number((rec.weight / (rec.height * rec.height)).toFixed(1));
+                    const localHeightM = getHeightInMeters(rec.height);
+                    const localImc = localHeightM > 0 ? Number((rec.weight / (localHeightM * localHeightM)).toFixed(1)) : 0;
                     return (
                       <div
                         key={rec.id}
@@ -704,7 +741,7 @@ export default function PerfilView({
                         <div className="space-y-1">
                           <p className="text-xs text-white font-bold">{formatDate(rec.date)}</p>
                           <p className="text-[10px] text-slate-400">
-                            Peso: {rec.weight} kg • Altura: {rec.height} m
+                            Peso: {rec.weight} kg • Altura: {formatHeight(rec.height)}
                           </p>
                         </div>
 
