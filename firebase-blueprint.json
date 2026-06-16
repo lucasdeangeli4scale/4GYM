@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "GymPost": {
+      "title": "GymPost",
+      "description": "A single social post of a logged workout activity by a team member",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the post"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Display name of the author"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Email identifier of the author"
+        },
+        "dateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the activity occurred"
+        },
+        "text": {
+          "type": "string",
+          "description": "Written description/comments of the workout"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Optional image URL representing proof of workout"
+        },
+        "likes": {
+          "type": "integer",
+          "description": "Total count of likes"
+        },
+        "likesList": {
+          "type": "array",
+          "description": "List of user emails who liked this post to prevent double-likes"
+        },
+        "commentsCount": {
+          "type": "integer",
+          "description": "Total count of comments"
+        },
+        "duration": {
+          "type": "integer",
+          "description": "Duration of workout in minutes"
+        },
+        "intensity": {
+          "type": "string",
+          "enum": ["Low", "Medium", "High"],
+          "description": "Intensity level of workout"
+        }
+      },
+      "required": ["id", "userName", "userEmail", "dateTime", "text"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Individual settings, health indicators, and physical history details for a user",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full display name of the user"
+        },
+        "email": {
+          "type": "string",
+          "description": "Primary email of the athlete"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Profile picture URL"
+        },
+        "weightRecords": {
+          "type": "array",
+          "description": "Array of physical weight/height measurements over time"
+        }
+      },
+      "required": ["name", "email"]
+    },
+    "WeightRecord": {
+      "title": "WeightRecord",
+      "description": "A single physical weight and height record tracking progress over time",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the record"
+        },
+        "weight": {
+          "type": "number",
+          "description": "Weight representation in kilograms"
+        },
+        "height": {
+          "type": "number",
+          "description": "Height representation in meters"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the weight measurement was performed"
+        }
+      },
+      "required": ["id", "weight", "height", "date"]
+    },
+    "FrequencyRecord": {
+      "title": "FrequencyRecord",
+      "description": "A workout check-in entry marking the date and the day of the week derived from the user's timeline activity",
+      "type": "object",
+      "properties": {
+        "postId": {
+          "type": "string",
+          "description": "ID of the associated post on the timeline"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the activity occurred"
+        },
+        "dayOfWeek": {
+          "type": "string",
+          "description": "Short form representation of the day (e.g. seg, ter, qua, qui, sex, sab, dom)"
+        },
+        "dayName": {
+          "type": "string",
+          "description": "Full name of the day of the week in Portuguese"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Email identifier of the active user"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Display name of the active user"
+        }
+      },
+      "required": ["postId", "date", "dayOfWeek", "dayName", "userEmail", "userName"]
+    }
+  },
+  "firestore": {
+    "/posts/{postId}": {
+      "schema": "GymPost",
+      "description": "Global activity feed of all team workouts"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Athlete medical/profile states managed by direct key matching"
+    },
+    "/users/{userId}/weightRecords/{recordId}": {
+      "schema": "WeightRecord",
+      "description": "Subcollection tracking weight and height records over time"
+    },
+    "/users/{userId}/frequencies/{frequencyId}": {
+      "schema": "FrequencyRecord",
+      "description": "Subcollection tracking specific workout frequency of days and dates"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Academia em Equipe",
+  "description": "Aplicativo para registro de idas à academia em equipe, acompanhamento de metas, régua de IMC e desafios semanais.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

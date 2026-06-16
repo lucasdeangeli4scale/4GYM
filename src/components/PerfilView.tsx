@@ -1,0 +1,822 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from "react";
+import { UserProfile, GymPost, Trophy, WeightRecord } from "../types";
+import { DEFAULT_TROPHIES, MONTH_PRIZE } from "../data";
+import {
+  Trophy as TrophyIcon,
+  Flame,
+  TrendingUp,
+  Sun,
+  Crown,
+  Heart,
+  Scale,
+  PlusCircle,
+  HelpCircle,
+  Dumbbell,
+  CheckCircle,
+  X,
+  Mail,
+  User,
+  Info,
+  ChevronRight,
+  Eye,
+  Calendar
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+
+interface PerfilViewProps {
+  userProfile: UserProfile;
+  posts: GymPost[];
+  onUpdateProfile: (name: string, email: string) => void;
+  onAddWeightRecord: (weight: number, height: number) => void;
+  onDeleteWeightRecord?: (id: string) => void;
+  onSignOut?: () => void;
+}
+
+export default function PerfilView({
+  userProfile,
+  posts,
+  onUpdateProfile,
+  onAddWeightRecord,
+  onDeleteWeightRecord,
+  onSignOut,
+}: PerfilViewProps) {
+  // State for editing profile info
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [editedName, setEditedName] = useState(userProfile.name);
+  const [editedEmail, setEditedEmail] = useState(userProfile.email);
+
+  // State for registering new weight/height
+  const [isAddingRecord, setIsAddingRecord] = useState(false);
+  const [newWeight, setNewWeight] = useState("");
+  const [newHeight, setNewHeight] = useState("");
+
+  // State for viewing historical records modal
+  const [isViewingHistory, setIsViewingHistory] = useState(false);
+
+  // State for prize details modal
+  const [isViewingPrizeDetails, setIsViewingPrizeDetails] = useState(false);
+
+  // State for registering/viewing invite copy code
+  const [isInviteCodeScreenOpen, setIsInviteCodeScreenOpen] = useState(false);
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
+
+  // Active weight/height records
+  const records = userProfile.weightRecords || [];
+  const latestRecord = records.length > 0 ? records[0] : { weight: 78.5, height: 1.82, date: new Date().toISOString() };
+
+  // Calculate IMC
+  const weight = latestRecord.weight;
+  const height = latestRecord.height;
+  const imc = height > 0 ? Number((weight / (height * height)).toFixed(1)) : 0;
+
+  // Determine IMC Status and Color (Porting to Violet & Rose themes)
+  let imcStatus = "Saudável";
+  let imcTextColor = "text-violet-400";
+  let imcBgColor = "bg-violet-400";
+  if (imc < 18.5) {
+    imcStatus = "Subpeso";
+    imcTextColor = "text-rose-400";
+    imcBgColor = "bg-rose-500";
+  } else if (imc >= 18.5 && imc <= 24.9) {
+    imcStatus = "Saudável";
+    imcTextColor = "text-violet-400";
+    imcBgColor = "bg-violet-400";
+  } else if (imc >= 25 && imc <= 29.9) {
+    imcStatus = "Sobrepeso";
+    imcTextColor = "text-amber-450";
+    imcBgColor = "bg-amber-500";
+  } else {
+    imcStatus = "Obesidade";
+    imcTextColor = "text-rose-500";
+    imcBgColor = "bg-rose-600";
+  }
+
+  // Position of IMC circle on slider scale (from IMC 15 to 35)
+  const minImc = 15;
+  const maxImc = 35;
+  const imcPercentage = Math.min(
+    Math.max(((imc - minImc) / (maxImc - minImc)) * 100, 0),
+    100
+  );
+
+  // Dynamically calculate trophy unlocks
+  const myPosts = posts.filter(
+    (p) => p.userEmail.toLowerCase() === userProfile.email.toLowerCase()
+  );
+
+  // 1. Unlocked first training?
+  const hasFirstStep = myPosts.length > 0;
+
+  // 2. Unlocked weekly consistency? (Posts in last 7 days >= 3)
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const postsThisWeek = myPosts.filter(
+    (p) => new Date(p.dateTime).getTime() >= oneWeekAgo.getTime()
+  );
+  const hasWeeklyConsistency = postsThisWeek.length >= 3;
+
+  // 3. Weekend Warrior? (Posted Saturday (6) or Sunday (0))
+  const hasWeekendWorkout = myPosts.some((p) => {
+    const day = new Date(p.dateTime).getDay();
+    return day === 0 || day === 6;
+  });
+
+  // 4. Beast mode? Total posts >= 10
+  const hasBeastMode = myPosts.length >= 10;
+
+  const trophies: Trophy[] = DEFAULT_TROPHIES.map((trophy) => {
+    let unlocked = false;
+    if (trophy.id === "first_workout") unlocked = hasFirstStep;
+    if (trophy.id === "consistency_3") unlocked = hasWeeklyConsistency;
+    if (trophy.id === "weekend_warrior") unlocked = hasWeekendWorkout;
+    if (trophy.id === "beast_mode") unlocked = hasBeastMode;
+
+    return { ...trophy, unlocked };
+  });
+
+  // Count unlocked trophies
+  const unlockedCount = trophies.filter((t) => t.unlocked).length;
+
+  const getTrophyIcon = (iconName: string, unlocked: boolean) => {
+    const size = 24;
+    const colorClass = unlocked ? "text-violet-400" : "text-slate-600";
+    switch (iconName) {
+      case "Flame":
+        return <Flame size={size} className={colorClass} />;
+      case "TrendingUp":
+        return <TrendingUp size={size} className={colorClass} />;
+      case "Sun":
+        return <Sun size={size} className={colorClass} />;
+      case "Crown":
+        return <Crown size={size} className={colorClass} />;
+      default:
+        return <TrophyIcon size={size} className={colorClass} />;
+    }
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editedName.trim() && editedEmail.trim()) {
+      onUpdateProfile(editedName.trim(), editedEmail.trim());
+      setIsEditingInfo(false);
+    }
+  };
+
+  const handleRegisterRecord = (e: React.FormEvent) => {
+    e.preventDefault();
+    const w = parseFloat(newWeight);
+    const h = parseFloat(newHeight);
+    if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
+      onAddWeightRecord(w, h);
+      setIsAddingRecord(false);
+      setNewWeight("");
+      setNewHeight("");
+    }
+  };
+
+  const formatDate = (isoString: string) => {
+    try {
+      return new Date(isoString).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+      });
+    } catch {
+      return isoString;
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0 bg-[#0A0A0A] text-slate-100 font-sans">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-[#0A0A0A]/95 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-[#141414]">
+        <div className="flex items-center gap-3">
+          <User className="w-5 h-5 text-violet-400" />
+          <h1 className="text-lg font-extrabold tracking-tight text-white font-sans">
+            Meu Perfil
+          </h1>
+        </div>
+        <div className="text-[10px] bg-[#161616] text-violet-400 px-3 py-1 rounded-full font-mono font-bold border border-violet-500/15">
+          TEAM ALEX
+        </div>
+      </header>
+
+      {/* Profile Content */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 pb-26 scrollbar-none">
+        
+        {/* Seção Superior - Dados Básicos */}
+        <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5 relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-24 h-24 bg-violet-400/5 rounded-full blur-2xl pointer-events-none" />
+
+          {isEditingInfo ? (
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="text-xs font-mono text-slate-500 block mb-1">Nome</label>
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-violet-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono text-slate-500 block mb-1">E-mail</label>
+                <input
+                  type="email"
+                  value={editedEmail}
+                  onChange={(e) => setEditedEmail(e.target.value)}
+                  className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-violet-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditedName(userProfile.name);
+                    setEditedEmail(userProfile.email);
+                    setIsEditingInfo(false);
+                  }}
+                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-violet-400 hover:bg-violet-500 text-black font-semibold px-4 py-1.5 rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="w-13 h-13 rounded-full bg-violet-400 p-0.5 flex-shrink-0 border border-[#202020]">
+                <div className="bg-[#111111] h-full w-full rounded-full flex items-center justify-center font-black text-base text-violet-400 font-sans">
+                  {userProfile.name ? userProfile.name.charAt(0) : "A"}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-white truncate tracking-tight">
+                  {userProfile.name}
+                </h2>
+                <p className="text-xs text-slate-500 truncate flex items-center gap-1.5 mt-1 font-sans">
+                  <Mail className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
+                  {userProfile.email}
+                </p>
+              </div>
+              <div className="ml-auto flex flex-col gap-1.5 min-w-[70px]">
+                <button
+                  onClick={() => setIsEditingInfo(true)}
+                  className="w-full text-xs font-bold text-violet-400 hover:text-white border border-violet-500/15 hover:border-violet-400/40 px-3 py-1.5 bg-[#141414] rounded-xl transition-all cursor-pointer text-center"
+                >
+                  Editar
+                </button>
+                {onSignOut && (
+                  <button
+                    onClick={onSignOut}
+                    className="w-full text-[10px] font-bold text-rose-450 hover:text-rose-400 border border-rose-500/10 hover:border-rose-500/35 px-3 py-1 bg-rose-500/5 rounded-xl transition-all cursor-pointer text-center"
+                  >
+                    Sair
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Access row to Invite Code screen */}
+        <div 
+          onClick={() => setIsInviteCodeScreenOpen(true)}
+          className="bg-gradient-to-r from-violet-900/10 to-transparent border border-violet-500/15 hover:border-violet-500/40 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all hover:scale-[1.01] select-none"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-violet-500/15 rounded-xl border border-violet-400/20 text-violet-400">
+              <PlusCircle className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <h4 className="font-bold text-white text-xs uppercase tracking-wider font-mono">Código de Convite</h4>
+              <p className="text-[10px] text-slate-400 mt-1">Compartilhe o código com seu colega de equipe</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-black text-violet-400 bg-violet-500/20 px-2.5 py-1 rounded-lg border border-violet-500/10 tracking-wider">
+              {userProfile.inviteCode || "------"}
+            </span>
+            <ChevronRight className="w-4 h-4 text-violet-400" />
+          </div>
+        </div>
+
+        {/* Seção de Prêmio do Mês */}
+        <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] font-bold bg-violet-400/10 border border-violet-400/20 text-violet-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              Prêmio do Mês
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium">Faltam 14 dias</span>
+          </div>
+
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#202020] bg-zinc-900 flex-shrink-0 relative">
+              <img
+                src={MONTH_PRIZE.imageUrl}
+                alt={MONTH_PRIZE.title}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h4 className="font-bold text-white text-sm tracking-tight leading-snug">
+                {MONTH_PRIZE.title}
+              </h4>
+              <p className="text-xs text-slate-400 line-clamp-1 mt-1 leading-normal">
+                {MONTH_PRIZE.description}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsViewingPrizeDetails(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#161616] hover:bg-zinc-800 text-xs font-bold text-slate-300 border border-zinc-800 rounded-xl transition-all cursor-pointer"
+          >
+            Ver detalhes <ChevronRight className="w-4 h-4 text-violet-400" />
+          </button>
+        </div>
+
+        {/* Régua de IMC (High Fidelity visual layout mimicking Image 3) */}
+        <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5 relative">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-white text-sm flex items-center gap-2 uppercase tracking-wide">
+              <Scale className="w-4 h-4 text-violet-400" />
+              Índice de Massa Corporal (IMC)
+            </h3>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${imcBgColor} text-slate-950 font-bold`}>
+              {imcStatus}
+            </span>
+          </div>
+
+          <p className="text-[11px] text-slate-500 mb-6 block font-sans">
+            Peso Ativo: <strong className="text-white">{weight} kg</strong> • Altura: <strong className="text-white">{height} m</strong>
+          </p>
+
+          {/* Dynamic IMC ruler container */}
+          <div className="relative pt-6 pb-2 px-1">
+            
+            {/* Visual sliding marker bubble with dynamic calc value above */}
+            <div
+              className="absolute top-0 transform -translate-x-1/2 transition-all duration-500 ease-out flex flex-col items-center"
+              style={{ left: `${imcPercentage}%` }}
+            >
+              <div className="bg-white text-zinc-950 text-[10px] font-extrabold font-sans px-2 py-0.5 rounded-lg shadow-2xl border border-zinc-300 leading-none">
+                {imc}
+              </div>
+              <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-zinc-900 shadow-md translate-y-3.5 z-20" />
+            </div>
+
+            {/* Colored horizontal segments representing weight categories */}
+            <div className="h-2 rounded-full overflow-hidden flex border border-[#1a1a1a]">
+              {/* Underweight (Red-ish) */}
+              <div className="flex-[3.5] bg-rose-500" title="Subpeso" />
+              {/* Healthy (Premium Violet matching mockups) */}
+              <div className="flex-[6.5] bg-violet-400" title="Saudável" />
+              {/* Overweight (Amber) */}
+              <div className="flex-[5] bg-amber-500" title="Sobrepeso" />
+              {/* Obese (Red) */}
+              <div className="flex-[5] bg-rose-600" title="Obesidade" />
+            </div>
+
+            {/* Labels under the bar */}
+            <div className="flex justify-between mt-2.5 text-[9px] font-sans text-slate-500 px-0.5 font-bold">
+              <span>Subpeso (15)</span>
+              <span>Saudável (22)</span>
+              <span>Sobrepeso (27)</span>
+              <span>Obesidade (35)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Últimos registros de Peso/Altura e botão Ver Histórico */}
+        <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3.5">
+            <h4 className="font-bold text-slate-400 text-xs uppercase tracking-wide">
+              Registros Históricos
+            </h4>
+            <button
+              onClick={() => setIsAddingRecord(true)}
+              className="text-xs text-violet-400 hover:text-white font-bold inline-flex items-center gap-1.5 cursor-pointer bg-violet-500/10 hover:bg-violet-500/15 px-3 py-1.5 rounded-xl border border-violet-500/15 transition-all"
+            >
+              <PlusCircle className="w-3.5 h-3.5" /> Adicionar
+            </button>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-[#202020] bg-[#161616] flex flex-col mb-4">
+            {records.length === 0 ? (
+              <div className="text-center py-4 text-xs text-slate-500">
+                Sem medições cadastradas ainda.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs text-slate-300">
+                <thead>
+                  <tr className="bg-[#111111] border-b border-[#202020] text-slate-500 text-[10px] uppercase font-bold">
+                    <th className="py-2.5 px-4">Data</th>
+                    <th className="py-2.5 px-4 font-sans">Peso (kg)</th>
+                    <th className="py-2.5 px-4">Altura (m)</th>
+                    <th className="py-2.5 px-4 text-center">IMC</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800">
+                  {records.slice(0, 3).map((rec) => {
+                    const localImc = Number((rec.weight / (rec.height * rec.height)).toFixed(1));
+                    return (
+                      <tr key={rec.id} className="hover:bg-zinc-900/40">
+                        <td className="py-2.5 px-4">{formatDate(rec.date)}</td>
+                        <td className="py-2.5 px-4">{rec.weight} kg</td>
+                        <td className="py-2.5 px-4">{rec.height} m</td>
+                        <td className="py-2.5 px-4 text-center">
+                          <span className="px-2 py-0.5 rounded-md font-bold bg-[#111111] border border-zinc-800 text-violet-400 text-[10px]">
+                            {localImc}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <button
+            onClick={() => setIsViewingHistory(true)}
+            className="w-full bg-[#161616] hover:bg-zinc-805 text-xs font-bold text-violet-405 hover:text-white py-2.5 border border-[#202020] rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <span>Ver histórico completo</span>
+            <ChevronRight className="w-4 h-4 text-violet-450" />
+          </button>
+        </div>
+
+        {/* Seção de Troféus (Styled precisely inside our layout grid) */}
+        <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-white text-sm flex items-center gap-2 uppercase tracking-wide">
+              <TrophyIcon className="w-4 h-4 text-amber-500" />
+              Troféus Conquistados ({unlockedCount}/4)
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {trophies.map((trophy) => (
+              <div
+                key={trophy.id}
+                className={`border rounded-xl p-3 flex flex-col gap-1.5 relative transition-all duration-300 ${
+                  trophy.unlocked
+                    ? "bg-[#161616] border-violet-500/20 shadow-lg shadow-violet-500/5"
+                    : "bg-[#161616]/40 border-zinc-900/80 grayscale opacity-40 select-none"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`p-1 rounded-lg ${
+                      trophy.unlocked ? "bg-violet-500/10 border border-violet-500/10" : "bg-zinc-800"
+                    }`}
+                  >
+                    {getTrophyIcon(trophy.icon, trophy.unlocked)}
+                  </div>
+                  <span
+                    className={`text-xs font-bold truncate ${
+                      trophy.unlocked ? "text-slate-100" : "text-slate-550"
+                    }`}
+                  >
+                    {trophy.title}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  {trophy.description}
+                </p>
+                {trophy.unlocked && (
+                  <div className="absolute right-2 top-2">
+                    <CheckCircle className="w-3.5 h-3.5 text-violet-400 fill-[#111111] stroke-[2.5]" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* MODAL: VER DETALHES DO PRÊMIO */}
+      <AnimatePresence>
+        {isViewingPrizeDetails && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-[#0A0A0A]/90 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 15 }}
+              className="bg-[#111111] border border-[#202020] rounded-2xl p-6 w-full max-w-sm max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl relative"
+            >
+              <button
+                onClick={() => setIsViewingPrizeDetails(false)}
+                className="absolute right-4 top-4 text-slate-400 hover:text-white cursor-pointer p-1.5 bg-[#1A1A1A] rounded-full border border-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="text-center space-y-2">
+                <span className="text-[10px] bg-violet-400/10 border border-violet-400/20 text-violet-400 font-sans font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  Premiação Mensal
+                </span>
+                <h3 className="font-extrabold text-base text-white tracking-tight">
+                  {MONTH_PRIZE.title}
+                </h3>
+              </div>
+
+              <div className="rounded-xl overflow-hidden aspect-square border border-[#202020] bg-zinc-900">
+                <img
+                  src={MONTH_PRIZE.imageUrl}
+                  alt={MONTH_PRIZE.title}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <p className="font-bold text-violet-400 text-xs uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" /> Como conquistar o kit:
+                </p>
+                <div className="text-xs text-slate-400 bg-black p-3.5 rounded-xl border border-zinc-900 leading-relaxed">
+                  {MONTH_PRIZE.details}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsViewingPrizeDetails(false)}
+                className="w-full bg-violet-400 hover:bg-violet-500 text-black font-extrabold py-3 rounded-xl text-xs cursor-pointer transition-all mt-4"
+              >
+                Foco no Objetivo!
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: NOVO REGISTRO PESO / ALTURA */}
+      <AnimatePresence>
+        {isAddingRecord && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-[#0A0A0A]/90 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 15 }}
+              className="bg-[#111111] border border-[#202020] rounded-2xl p-6 w-full max-w-sm space-y-5 shadow-2xl relative"
+            >
+              <button
+                onClick={() => setIsAddingRecord(false)}
+                className="absolute right-4 top-4 text-slate-400 hover:text-white cursor-pointer p-1.5 bg-[#1A1A1A] rounded-full border border-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-2.5">
+                <Scale className="w-5 h-5 text-violet-400" />
+                <h3 className="font-extrabold text-base text-white tracking-tight">
+                  Nova Medição Física
+                </h3>
+              </div>
+
+              <form onSubmit={handleRegisterRecord} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1.5">
+                    Peso de treino (em kg)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="Ex: 78.5"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-650 focus:border-violet-400 outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1.5">
+                    Altura atual (em metros)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Ex: 1.82"
+                    value={newHeight}
+                    onChange={(e) => setNewHeight(e.target.value)}
+                    className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-650 focus:border-violet-400 outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="text-[10px] text-slate-500 flex items-start gap-2 bg-black p-3.5 rounded-xl border border-zinc-900 leading-normal">
+                  <Info className="w-4 h-4 text-violet-400 flex-shrink-0 mt-0.5" />
+                  <span>
+                    O seu IMC será atualizado de imediato, aplicando a régua visual de saúde na aba de Perfil do applet.
+                  </span>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingRecord(false)}
+                    className="flex-1 py-3 text-xs font-bold bg-[#111111] border border-slate-900 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 text-xs font-bold bg-violet-400 hover:bg-violet-500 text-black rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-500/10"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: HISTÓRICO COMPLETO */}
+      <AnimatePresence>
+        {isViewingHistory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-[#0A0A0A]/90 z-40 flex items-center justify-center p-4 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 15 }}
+              className="bg-[#111111] border border-[#202020] rounded-2xl p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto space-y-4 shadow-2xl relative"
+            >
+              <button
+                onClick={() => setIsViewingHistory(false)}
+                className="absolute right-4 top-4 text-slate-400 hover:text-white cursor-pointer p-1.5 bg-[#1A1A1A] rounded-full border border-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-2.5">
+                <Calendar className="w-5 h-5 text-violet-400" />
+                <h3 className="font-extrabold text-base text-white tracking-tight">
+                  Medições Históricas
+                </h3>
+              </div>
+
+              <div className="space-y-3 pr-0.5 max-h-[50vh] overflow-y-auto scrollbar-none">
+                {records.length === 0 ? (
+                  <div className="text-center py-6 text-slate-550 text-xs">
+                    Nenhum registro encontrado.
+                  </div>
+                ) : (
+                  records.map((rec) => {
+                    const localImc = Number((rec.weight / (rec.height * rec.height)).toFixed(1));
+                    return (
+                      <div
+                        key={rec.id}
+                        className="bg-black p-3.5 rounded-xl border border-zinc-900 flex items-center justify-between"
+                      >
+                        <div className="space-y-1">
+                          <p className="text-xs text-white font-bold">{formatDate(rec.date)}</p>
+                          <p className="text-[10px] text-slate-400">
+                            Peso: {rec.weight} kg • Altura: {rec.height} m
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <span className="text-[9px] block text-slate-500 font-bold uppercase">IMC</span>
+                            <span className="text-xs font-bold text-violet-400">{localImc}</span>
+                          </div>
+
+                          {onDeleteWeightRecord && records.length > 1 && (
+                            <button
+                              onClick={() => onDeleteWeightRecord(rec.id)}
+                              className="text-slate-605 hover:text-rose-450 p-1.5 bg-[#161616] rounded-lg hover:bg-rose-500/10 cursor-pointer transition-colors"
+                              title="Remover registro"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <button
+                onClick={() => setIsViewingHistory(false)}
+                className="w-full bg-[#161616] hover:bg-zinc-800 border border-[#202020] rounded-xl text-slate-350 font-bold py-3 text-xs cursor-pointer transition-all mt-4"
+              >
+                Voltar ao Painel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TELA DE CÓDIGO - Siga exatamente os requerimentos */}
+      <AnimatePresence>
+        {isInviteCodeScreenOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute inset-0 bg-[#0A0A0A] z-50 flex flex-col font-sans"
+          >
+            {/* Header / Barra superior */}
+            <div className="p-4 border-b border-slate-900 flex items-center justify-between bg-[#111111]">
+              <div className="flex items-center gap-2">
+                <PlusCircle className="w-5 h-5 text-violet-400" />
+                <h3 className="font-bold text-white text-sm font-sans tracking-tight">Código do Membro</h3>
+              </div>
+              <button
+                onClick={() => setIsInviteCodeScreenOpen(false)}
+                className="p-1.5 hover:bg-zinc-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-8 select-none">
+              
+              {/* Informative Icon Accent */}
+              <div className="relative">
+                <div className="p-5 bg-violet-500/10 rounded-full border border-violet-500/15 text-violet-400 animate-pulse">
+                  <div className="w-12 h-12 bg-violet-500/20 rounded-full flex items-center justify-center border border-violet-500/30">
+                    <PlusCircle className="w-6 h-6 text-violet-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Informative Label */}
+              <div className="space-y-2 max-w-xs">
+                <h2 className="text-base font-bold text-slate-400 uppercase tracking-wider font-mono">Convite de Membro</h2>
+                <p className="text-xs text-slate-300">
+                  Compartilhe o código com seu colega de equipe
+                </p>
+              </div>
+
+              {/* Code Display inside a div with border-rounded-24px dashed in main color */}
+              <div className="p-5 border-2 border-dashed border-violet-500 rounded-[24px] bg-[#111111] shadow-2xl relative overflow-hidden group hover:border-violet-400 transition-all min-w-[200px]">
+                <span className="text-3xl font-black font-mono tracking-[0.25em] text-white select-all">
+                  {userProfile.inviteCode || "461011"}
+                </span>
+              </div>
+
+              {/* Copy Code button */}
+              <div className="w-full max-w-xs">
+                <button
+                  onClick={() => {
+                    if (userProfile.inviteCode) {
+                      navigator.clipboard.writeText(userProfile.inviteCode);
+                      // Show a transient success notification
+                      setCopiedFeedback(true);
+                      setTimeout(() => setCopiedFeedback(false), 2000);
+                    }
+                  }}
+                  className="w-full bg-violet-600 hover:bg-violet-550 active:scale-98 text-white font-bold py-3.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-violet-500/5 hover:shadow-violet-650/15 flex items-center justify-center gap-2 cursor-pointer animate-fadeIn"
+                >
+                  {copiedFeedback ? "Código Copiado! 👍" : "Copiar código"}
+                </button>
+              </div>
+
+              {/* Extra instructions */}
+              <p className="text-[10px] text-slate-500 max-w-xs leading-relaxed">
+                Este código é de uso exclusivo para novos atletas da sua equipe. Ele será exigido no momento do cadastro para liberação de acesso.
+              </p>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
