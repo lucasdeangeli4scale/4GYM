@@ -9,6 +9,8 @@ import { SEED_POSTS, DEFAULT_MEMBERS, MONTH_PRIZE } from "./data";
 import TimelineView from "./components/TimelineView";
 import DesafiosView from "./components/DesafiosView";
 import PerfilView from "./components/PerfilView";
+import MedicoesView from "./components/MedicoesView";
+import EditPerfilView from "./components/EditPerfilView";
 import PostModal from "./components/PostModal";
 import AuthView from "./components/AuthView";
 import OnboardingView from "./components/OnboardingView";
@@ -43,8 +45,8 @@ const INITIAL_PROFILE: UserProfile = {
 };
 
 export default function App() {
-  // State for active view tab: 'timeline' | 'desafios' | 'perfil'
-  const [activeTab, setActiveTab] = useState<"timeline" | "desafios" | "perfil">("timeline");
+  // State for active view tab: 'timeline' | 'desafios' | 'perfil' | 'medicoes' | 'editar-perfil'
+  const [activeTab, setActiveTab] = useState<"timeline" | "desafios" | "perfil" | "medicoes" | "editar-perfil">("timeline");
 
   // Auth states
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
@@ -236,6 +238,7 @@ export default function App() {
 
   // Modal open states
   const [isAddPostOpen, setIsAddPostOpen] = useState(false);
+  const [postToEdit, setPostToEdit] = useState<GymPost | null>(null);
 
   // Fallback states for Firestore permissions block
   const [permissionError, setPermissionError] = useState<string | null>(null);
@@ -490,14 +493,43 @@ export default function App() {
     }
   };
 
+  // Edit an existing post (Firestore with Local Fallback)
+  const handleEditPost = async (id: string, text: string, imageUrl?: string) => {
+    const updated = posts.map((p) => {
+      if (p.id === id) {
+        return {
+          ...p,
+          text,
+          imageUrl: imageUrl || undefined,
+        };
+      }
+      return p;
+    });
+    setPosts(updated);
+    localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(updated));
+
+    if (useLocalFallback) return;
+
+    try {
+      const postRef = doc(db, "posts", id);
+      await updateDoc(postRef, {
+        text,
+        imageUrl: imageUrl || null,
+      });
+    } catch (e) {
+      console.warn("Firestore edit failed, relying on local simulation", e);
+    }
+  };
+
   // Update profile data and propagate name switches (Firestore with Local Fallback)
-  const handleUpdateProfile = async (name: string, email: string) => {
+  const handleUpdateProfile = async (name: string, email: string, avatar?: string) => {
     const oldEmail = userProfile.email;
 
     const updatedProfile = {
       ...userProfile,
       name,
       email,
+      avatar: avatar !== undefined ? avatar : userProfile.avatar,
     };
     setUserProfile(updatedProfile);
     localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(updatedProfile));
@@ -526,7 +558,7 @@ export default function App() {
         await setDoc(newDocRef, {
           name,
           email,
-          avatar: userProfile.avatar || "",
+          avatar: avatar || userProfile.avatar || "",
           weightRecords: userProfile.weightRecords,
         });
         await deleteDoc(oldDocRef);
@@ -534,7 +566,7 @@ export default function App() {
         await setDoc(oldDocRef, {
           name,
           email,
-          avatar: userProfile.avatar || "",
+          avatar: avatar || userProfile.avatar || "",
           weightRecords: userProfile.weightRecords,
         });
       }
@@ -788,7 +820,7 @@ export default function App() {
       
       {/* MOBILE SMARTPHONE SIMULATOR CONTAINER WRAPPER */}
       <div 
-        className="w-full md:max-w-[412px] md:h-[844px] bg-[#0A0A0A] md:rounded-[40px] md:border-[10px] md:border-[#111111] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] relative flex flex-col overflow-hidden aspect-auto border-slate-850"
+        className="w-full h-screen md:h-[844px] md:max-w-[412px] bg-[#0A0A0A] md:rounded-[40px] md:border-[10px] md:border-[#111111] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] relative flex flex-col overflow-hidden border-slate-850"
         id="smartphone-shell"
       >
         {useLocalFallback && permissionError && (
@@ -830,9 +862,14 @@ export default function App() {
                   onOpenAddPost={() => setIsAddPostOpen(true)}
                   onDeletePost={handleDeletePost}
                   currentUserEmail={userProfile.email}
+                  currentUserAvatar={userProfile.avatar}
                   onLikePost={handleLikePost}
                   onAddComment={handleAddComment}
                   teamMembers={teamMembers}
+                  onEditRequest={(post) => {
+                    setPostToEdit(post);
+                    setIsAddPostOpen(true);
+                  }}
                 />
               )}
 
@@ -841,6 +878,7 @@ export default function App() {
                   posts={posts}
                   currentUserEmail={userProfile.email}
                   currentUserName={userProfile.name}
+                  currentUserAvatar={userProfile.avatar}
                   teamMembers={teamMembers}
                 />
               )}
@@ -849,12 +887,30 @@ export default function App() {
                 <PerfilView
                   userProfile={userProfile}
                   posts={posts}
-                  onUpdateProfile={handleUpdateProfile}
                   onAddWeightRecord={handleAddWeightRecord}
                   onDeleteWeightRecord={handleDeleteWeightRecord}
                   onSignOut={handleSignOut}
                   monthPrize={monthPrize}
                   teamMembers={teamMembers}
+                  onViewHistory={() => setActiveTab("medicoes")}
+                  onEditProfile={() => setActiveTab("editar-perfil")}
+                />
+              )}
+
+              {activeTab === "editar-perfil" && (
+                <EditPerfilView
+                  userProfile={userProfile}
+                  onBack={() => setActiveTab("perfil")}
+                  onUpdateProfile={handleUpdateProfile}
+                />
+              )}
+
+              {activeTab === "medicoes" && (
+                <MedicoesView
+                  userProfile={userProfile}
+                  onBack={() => setActiveTab("perfil")}
+                  onAddWeightRecord={handleAddWeightRecord}
+                  onDeleteWeightRecord={handleDeleteWeightRecord}
                 />
               )}
             </div>
@@ -896,7 +952,7 @@ export default function App() {
               <button
                 onClick={() => setActiveTab("perfil")}
                 className={`cursor-pointer transition-all ${
-                  activeTab === "perfil" 
+                  activeTab === "perfil" || activeTab === "medicoes" || activeTab === "editar-perfil"
                     ? "bg-[#161616] border border-slate-800/85 rounded-2xl px-5 py-1.5 text-violet-400 scale-102 flex flex-col items-center justify-center min-w-[95px]" 
                     : "text-slate-500 hover:text-slate-300 px-5 py-1.5 flex flex-col items-center justify-center min-w-[95px]"
                 }`}
@@ -913,8 +969,19 @@ export default function App() {
         {/* ACTIVITY POST MODAL OVERLAY */}
         <PostModal
           isOpen={isAddPostOpen}
-          onClose={() => setIsAddPostOpen(false)}
-          onSubmitPost={handleAddPost}
+          onClose={() => {
+            setIsAddPostOpen(false);
+            setPostToEdit(null);
+          }}
+          onSubmitPost={(text, imageUrl, duration, intensity) => {
+            if (postToEdit) {
+              handleEditPost(postToEdit.id, text, imageUrl);
+            } else {
+              handleAddPost(text, imageUrl, duration, intensity);
+            }
+          }}
+          postToEdit={postToEdit || undefined}
+          onDeletePost={(id) => handleDeletePost(id, userProfile.email)}
         />
       </div>
 

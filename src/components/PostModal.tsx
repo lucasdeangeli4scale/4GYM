@@ -9,25 +9,34 @@ import {
   Camera,
   Upload,
   Check,
-  RotateCcw
+  RotateCcw,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { GymPost } from "../types";
 
 interface PostModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitPost: (text: string, imageUrl?: string, duration?: number, intensity?: "Low" | "Medium" | "High") => void;
+  postToEdit?: GymPost;
+  onDeletePost?: (id: string) => void;
 }
 
 export default function PostModal({
   isOpen,
   onClose,
   onSubmitPost,
+  postToEdit,
+  onDeletePost,
 }: PostModalProps) {
   const [text, setText] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
+  const isEditMode = !!postToEdit;
+
   // Webcam states
   const [useWebcam, setUseWebcam] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -35,7 +44,7 @@ export default function PostModal({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Clean form state on modal display triggers
+  // Clean form state or prefill on modal display triggers
   useEffect(() => {
     if (!isOpen) {
       stopCamera();
@@ -43,8 +52,12 @@ export default function PostModal({
       setSelectedImage(null);
       setUseWebcam(false);
       setShowAbandonConfirm(false);
+      setShowDeleteConfirm(false);
+    } else if (postToEdit) {
+      setText(postToEdit.text);
+      setSelectedImage(postToEdit.imageUrl || null);
     }
-  }, [isOpen]);
+  }, [isOpen, postToEdit]);
 
   const handleBackRequest = () => {
     setShowAbandonConfirm(true);
@@ -123,7 +136,12 @@ export default function PostModal({
     e.preventDefault();
     if (!text.trim()) return;
     
-    onSubmitPost(text.trim(), selectedImage || undefined, 45, "High");
+    onSubmitPost(
+      text.trim(),
+      selectedImage || undefined,
+      postToEdit?.duration || 45,
+      postToEdit?.intensity || "High"
+    );
     onClose();
   };
 
@@ -131,7 +149,7 @@ export default function PostModal({
 
   return (
     <AnimatePresence>
-      <div className="absolute inset-0 bg-[#0A0A0A] z-50 flex flex-col justify-end md:justify-center backdrop-blur-md">
+      <div className="absolute inset-0 bg-[#0A0A0A] z-40 flex flex-col justify-end md:justify-center backdrop-blur-md">
         
         <motion.div
           initial={{ y: "15%" }}
@@ -150,9 +168,20 @@ export default function PostModal({
               <ArrowLeft className="w-5 h-5 text-violet-400 stroke-[2.2]" />
             </button>
             <h2 className="text-base font-extrabold text-white tracking-tight">
-              Nova atividade
+              {isEditMode ? "Editar atividade" : "Nova atividade"}
             </h2>
-            <div className="w-8" /> {/* Balance layout spacing */}
+            {isEditMode ? (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-rose-450 hover:text-rose-400 cursor-pointer p-1.5 hover:bg-[#111111] rounded-full transition-all"
+                title="Excluir Atividade"
+              >
+                <Trash2 className="w-5 h-5 stroke-[2.2]" />
+              </button>
+            ) : (
+              <div className="w-8" />
+            )}
           </header>
  
           {/* Activity Formulation Form */}
@@ -167,7 +196,7 @@ export default function PostModal({
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="What did you crush today?"
+                  placeholder="O que tem em mente, ou o que treinou pesado hoje?"
                   required
                   rows={4}
                   className="w-full bg-[#111111] border border-[#202020] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none transition-colors resize-none"
@@ -319,7 +348,7 @@ export default function PostModal({
                       : "bg-[#161616] text-slate-600 cursor-not-allowed"
                   }`}
                 >
-                  Publicar Atividade
+                  {isEditMode ? "Atualizar atividade" : "Publicar Atividade"}
                 </button>
               </div>
  
@@ -362,6 +391,49 @@ export default function PostModal({
                     className="flex-grow py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
                   >
                     Abandonar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Delete confirmation modal */}
+        <AnimatePresence>
+          {showDeleteConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/85 flex items-center justify-center p-6 z-55 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-[#111111] border border-slate-800/80 p-6 rounded-2xl max-w-xs w-full text-center space-y-4 shadow-2xl"
+              >
+                <p className="text-sm font-bold text-white">Deseja apagar seu treino?</p>
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-grow py-2.5 bg-[#1C1C1E] hover:bg-[#2C2C2E] text-slate-350 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      if (onDeletePost && postToEdit) {
+                        onDeletePost(postToEdit.id);
+                      }
+                      onClose();
+                    }}
+                    className="flex-grow py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Apagar
                   </button>
                 </div>
               </motion.div>

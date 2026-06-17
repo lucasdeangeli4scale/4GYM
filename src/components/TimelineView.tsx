@@ -13,7 +13,8 @@ import {
   MoreVertical, 
   Plus, 
   Trash2, 
-  Send 
+  Send,
+  Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { DEFAULT_MEMBERS } from "../data";
@@ -23,9 +24,11 @@ interface TimelineViewProps {
   onOpenAddPost: () => void;
   onDeletePost?: (id: string, userEmail: string) => void;
   currentUserEmail: string;
+  currentUserAvatar?: string;
   onLikePost?: (id: string) => void;
   onAddComment?: (id: string, text: string) => void;
   teamMembers?: TeamMember[];
+  onEditRequest?: (post: GymPost) => void;
 }
 
 export default function TimelineView({
@@ -33,9 +36,11 @@ export default function TimelineView({
   onOpenAddPost,
   onDeletePost,
   currentUserEmail,
+  currentUserAvatar,
   onLikePost,
   onAddComment,
   teamMembers,
+  onEditRequest,
 }: TimelineViewProps) {
   // Sort posts by date, latest first
   const sortedPosts = [...posts].sort(
@@ -126,6 +131,9 @@ export default function TimelineView({
 
   // Find avatar helper
   const getMemberAvatar = (email: string, name: string) => {
+    if (email && currentUserEmail && email.toLowerCase() === currentUserEmail.toLowerCase() && currentUserAvatar) {
+      return currentUserAvatar;
+    }
     const list = teamMembers && teamMembers.length > 0 ? teamMembers : DEFAULT_MEMBERS;
     const member = list.find(m => m.email.toLowerCase() === email.toLowerCase());
     if (member?.avatar) return member.avatar;
@@ -263,7 +271,16 @@ export default function TimelineView({
                         </div>
                       </div>
 
-
+                      {isMyPost && onEditRequest && (
+                        <button
+                          type="button"
+                          onClick={() => onEditRequest(post)}
+                          className="text-slate-400 hover:text-violet-400 p-1.5 hover:bg-[#1C1C1C] rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                          title="Editar atividade"
+                        >
+                          <Pencil className="w-3.5 h-3.5 stroke-[2.2]" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Post Content Text */}

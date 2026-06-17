@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { TeamMember, Trophy, MonthPrize } from "./types";
+import { TeamMember, Trophy, MonthPrize, GymPost } from "./types";
 
 export const DEFAULT_MEMBERS: TeamMember[] = [
   {
-    id: "alex_me",
-    name: "Alex Mercer",
+    id: "lucas_de",
+    name: "Lucas de Angeli",
     email: "lucas_deangeli@4scale.com.br",
     avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
   },
@@ -61,69 +61,42 @@ export const PRESET_WORKOUTS = [
 ];
 
 export const MONTH_PRIZE: MonthPrize = {
-  title: "Kit Suplementação Pro",
-  imageUrl: "https://images.unsplash.com/photo-1579758629938-03607ccdbaba?w=450&auto=format&fit=crop&q=80",
-  description: "Complete 20 treinos este mês para concorrer ao kit premium Obsidian.",
-  details: "O membro da equipe com o maior número de treinos validados e consistência semanal ganhará este super Kit de Suplementação Pro (linha premium Obsidian) com Creatina, Pré-treino e Coqueteleira térmica de titânio! A entrega ocorre dia 30.",
+  title: "WheyProtein",
+  imageUrl: "https://www.drogasil.com.br/_next/image?url=https%3A%2F%2Fproduct-data.raiadrogasil.io%2Fimages%2F3446808.webp&w=3840&q=40",
+  description: "Complete a maior quantidade de treinos este mês para concorrer ao Prêmio",
+  details: "O membro da equipe com o maior número de treinos validados e consistência semanal ganhará este super WheyProtein.",
 };
 
 export const DEFAULT_TROPHIES: Trophy[] = [
   {
+    id: "first_workout",
+    title: "1º de muitos",
+    description: "Registre seu primeiro treino",
+    icon: "CheckCircle",
+    unlocked: false,
+  },
+  {
     id: "7_days",
-    title: "7 DIAS",
-    description: "Treinou 7 dias seguidos sem furar.",
+    title: "7 dias",
+    description: "1 semana consecutiva",
     icon: "Flame",
     unlocked: false,
   },
   {
-    id: "power",
-    title: "FORÇA",
-    description: "Registrou um recorde de levantamento terra ou supino peso alto.",
-    icon: "Dumbbell",
-    unlocked: true,
-  },
-  {
-    id: "cardio_challenge",
-    title: "CARDIO",
-    description: "Totalizou mais de 15km percorridos em esteira ou rua.",
+    id: "14_days",
+    title: "14 dias",
+    description: "Uau! Metade da meta, foco e força",
     icon: "TrendingUp",
-    unlocked: true,
+    unlocked: false,
   },
   {
-    id: "elite",
-    title: "ELITE",
-    description: "Completa mais de 25 treinos registrados com intensidade alta.",
+    id: "30_days",
+    title: "O(A) brabo(a)",
+    description: "30 dias de foco. Parabéns!",
     icon: "Crown",
     unlocked: false,
   },
 ];
 
-// Seed posts so the app starts with high fidelity, but the user can easily clear them to see the empty state.
-export const SEED_POSTS = [
-  {
-    id: "post_1",
-    userName: "Marcus Thorne",
-    userEmail: "marcus.thorne@4scale.com.br",
-    dateTime: "2026-06-16T13:30:00.000Z", // Today, 06:30 AM (converting to UTC local timezone check)
-    text: "Novo PR no levantamento terra! 180kg subiram fáceis hoje. O treino focado em força nas últimas semanas finalmente está dando resultado. Próxima meta: 200kg. 🏋️‍♂️🔥",
-    imageUrl: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=650&auto=format&fit=crop&q=80",
-    likes: 42,
-    comments: 5,
-    isLiked: false,
-    duration: 60,
-    intensity: "High" as const,
-  },
-  {
-    id: "post_2",
-    userName: "Elena Silva",
-    userEmail: "elena.silva@4scale.com.br",
-    dateTime: "2026-06-15T22:15:00.000Z", // Yesterday, 19:15 PM (UTC representation)
-    text: "Cardio concluído. 10km na esteira em um ritmo constante. A disciplina é o que nos leva longe. 🏃‍♀️✨",
-    imageUrl: undefined, // no image for Elena Silva card
-    likes: 128,
-    comments: 12,
-    isLiked: true,
-    duration: 45,
-    intensity: "Medium" as const,
-  },
-];
+export const SEED_POSTS: GymPost[] = [];
+

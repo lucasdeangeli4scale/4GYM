@@ -31,38 +31,32 @@ import { motion, AnimatePresence } from "motion/react";
 interface PerfilViewProps {
   userProfile: UserProfile;
   posts: GymPost[];
-  onUpdateProfile: (name: string, email: string) => void;
   onAddWeightRecord: (weight: number, height: number) => void;
   onDeleteWeightRecord?: (id: string) => void;
   onSignOut?: () => void;
   monthPrize?: MonthPrize;
   teamMembers?: TeamMember[];
+  onViewHistory?: () => void;
+  onEditProfile?: () => void;
 }
 
 export default function PerfilView({
   userProfile,
   posts,
-  onUpdateProfile,
   onAddWeightRecord,
   onDeleteWeightRecord,
   onSignOut,
   monthPrize,
   teamMembers,
+  onViewHistory,
+  onEditProfile,
 }: PerfilViewProps) {
   const activePrize = monthPrize || MONTH_PRIZE;
-  // State for editing profile info
-  const [isEditingInfo, setIsEditingInfo] = useState(false);
-  const [editedName, setEditedName] = useState(userProfile.name);
-  const [editedEmail, setEditedEmail] = useState(userProfile.email);
 
   // State for registering new weight/height
   const [isAddingRecord, setIsAddingRecord] = useState(false);
   const [newWeight, setNewWeight] = useState("");
-  const [newHeight, setNewHeight] = useState("");
   const [recordError, setRecordError] = useState<string | null>(null);
-
-  // State for viewing historical records modal
-  const [isViewingHistory, setIsViewingHistory] = useState(false);
 
   // State for prize details modal
   const [isViewingPrizeDetails, setIsViewingPrizeDetails] = useState(false);
@@ -125,13 +119,44 @@ export default function PerfilView({
     100
   );
 
-  // Dynamically calculate trophy unlocks
+  // Dynamically calculate trophy unlocks and active focus streaks
   const myPosts = posts.filter(
     (p) => p.userEmail.toLowerCase() === userProfile.email.toLowerCase()
   );
 
   // 1. Unlocked first training?
   const hasFirstStep = myPosts.length > 0;
+
+  // Compute actual consecutive days streak from user's posts
+  const uniqueDates = Array.from(
+    new Set(
+      myPosts.map((p) => {
+        const d = new Date(p.dateTime);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      })
+    )
+  ).sort();
+
+  let maxStreak = 0;
+  let currentStreak = 0;
+  if (uniqueDates.length > 0) {
+    maxStreak = 1;
+    currentStreak = 1;
+    for (let i = 1; i < uniqueDates.length; i++) {
+      const prev = new Date(uniqueDates[i - 1]);
+      const curr = new Date(uniqueDates[i]);
+      const diffTime = curr.getTime() - prev.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) {
+        currentStreak++;
+        if (currentStreak > maxStreak) {
+          maxStreak = currentStreak;
+        }
+      } else if (diffDays > 1) {
+        currentStreak = 1;
+      }
+    }
+  }
 
   // 2. Unlocked weekly consistency? (Posts in last 7 days >= 3)
   const oneWeekAgo = new Date();
@@ -141,21 +166,17 @@ export default function PerfilView({
   );
   const hasWeeklyConsistency = postsThisWeek.length >= 3;
 
-  // 3. Weekend Warrior? (Posted Saturday (6) or Sunday (0))
-  const hasWeekendWorkout = myPosts.some((p) => {
-    const day = new Date(p.dateTime).getDay();
-    return day === 0 || day === 6;
-  });
-
-  // 4. Beast mode? Total posts >= 10
-  const hasBeastMode = myPosts.length >= 10;
-
   const trophies: Trophy[] = DEFAULT_TROPHIES.map((trophy) => {
     let unlocked = false;
-    if (trophy.id === "first_workout") unlocked = hasFirstStep;
-    if (trophy.id === "consistency_3") unlocked = hasWeeklyConsistency;
-    if (trophy.id === "weekend_warrior") unlocked = hasWeekendWorkout;
-    if (trophy.id === "beast_mode") unlocked = hasBeastMode;
+    if (trophy.id === "first_workout") {
+      unlocked = hasFirstStep;
+    } else if (trophy.id === "7_days") {
+      unlocked = maxStreak >= 7 || myPosts.length >= 7 || hasWeeklyConsistency;
+    } else if (trophy.id === "14_days") {
+      unlocked = maxStreak >= 14 || myPosts.length >= 14;
+    } else if (trophy.id === "30_days") {
+      unlocked = maxStreak >= 30 || myPosts.length >= 30;
+    }
 
     return { ...trophy, unlocked };
   });
@@ -175,16 +196,12 @@ export default function PerfilView({
         return <Sun size={size} className={colorClass} />;
       case "Crown":
         return <Crown size={size} className={colorClass} />;
+      case "CheckCircle":
+        return <CheckCircle size={size} className={colorClass} />;
+      case "Dumbbell":
+        return <Dumbbell size={size} className={colorClass} />;
       default:
         return <TrophyIcon size={size} className={colorClass} />;
-    }
-  };
-
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editedName.trim() && editedEmail.trim()) {
-      onUpdateProfile(editedName.trim(), editedEmail.trim());
-      setIsEditingInfo(false);
     }
   };
 
@@ -192,19 +209,14 @@ export default function PerfilView({
     e.preventDefault();
     setRecordError(null);
     const w = parseFloat(newWeight);
-    const h = parseFloat(newHeight);
     if (isNaN(w) || w < 30 || w > 300) {
       setRecordError("Por favor, insira um peso válido entre 30kg e 300kg.");
       return;
     }
-    if (isNaN(h) || h < 100 || h > 250) {
-      setRecordError("Por favor, insira uma altura em centímetros com exatamente 3 dígitos (Ex: 182).");
-      return;
-    }
-    onAddWeightRecord(w, h / 100);
+    const h = latestRecord.height;
+    onAddWeightRecord(w, h);
     setIsAddingRecord(false);
     setNewWeight("");
-    setNewHeight("");
   };
 
   const formatDate = (isoString: string) => {
@@ -230,7 +242,7 @@ export default function PerfilView({
           </h1>
         </div>
         <div className="text-[10px] bg-[#161616] text-violet-400 px-3 py-1 rounded-full font-mono font-bold border border-violet-500/15">
-          TEAM ALEX
+          TEAM 4SCALE
         </div>
       </header>
 
@@ -241,54 +253,21 @@ export default function PerfilView({
         <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-violet-400/5 rounded-full blur-2xl pointer-events-none" />
 
-          {isEditingInfo ? (
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div>
-                <label className="text-xs font-mono text-slate-500 block mb-1">Nome</label>
-                <input
-                  type="text"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-violet-400 focus:outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-xs font-mono text-slate-500 block mb-1">E-mail</label>
-                <input
-                  type="email"
-                  value={editedEmail}
-                  onChange={(e) => setEditedEmail(e.target.value)}
-                  className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-violet-400 focus:outline-none"
-                  required
-                />
-              </div>
-              <div className="flex gap-2 justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditedName(userProfile.name);
-                    setEditedEmail(userProfile.email);
-                    setIsEditingInfo(false);
-                  }}
-                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="bg-violet-400 hover:bg-violet-500 text-black font-semibold px-4 py-1.5 rounded-lg text-xs transition-colors cursor-pointer"
-                >
-                  Salvar
-                </button>
-              </div>
-            </form>
-          ) : (
+          <div className="flex flex-col gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-13 h-13 rounded-full bg-violet-400 p-0.5 flex-shrink-0 border border-[#202020]">
-                <div className="bg-[#111111] h-full w-full rounded-full flex items-center justify-center font-black text-base text-violet-400 font-sans">
-                  {userProfile.name ? userProfile.name.charAt(0) : "A"}
-                </div>
+              <div className="w-13 h-13 rounded-full bg-violet-400 p-0.5 flex-shrink-0 border border-[#202020] overflow-hidden flex items-center justify-center animate-fade-in">
+                {userProfile.avatar ? (
+                  <img
+                    src={userProfile.avatar}
+                    alt={userProfile.name}
+                    className="w-full h-full object-cover rounded-full"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="bg-[#111111] h-full w-full rounded-full flex items-center justify-center font-black text-base text-violet-400 font-sans">
+                    {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : "A"}
+                  </div>
+                )}
               </div>
               <div className="min-w-0">
                 <h2 className="text-base font-bold text-white truncate tracking-tight">
@@ -299,24 +278,16 @@ export default function PerfilView({
                   {userProfile.email}
                 </p>
               </div>
-              <div className="ml-auto flex flex-col gap-1.5 min-w-[70px]">
-                <button
-                  onClick={() => setIsEditingInfo(true)}
-                  className="w-full text-xs font-bold text-violet-400 hover:text-white border border-violet-500/15 hover:border-violet-400/40 px-3 py-1.5 bg-[#141414] rounded-xl transition-all cursor-pointer text-center"
-                >
-                  Editar
-                </button>
-                {onSignOut && (
-                  <button
-                    onClick={onSignOut}
-                    className="w-full text-[10px] font-bold text-rose-450 hover:text-rose-400 border border-rose-500/10 hover:border-rose-500/35 px-3 py-1 bg-rose-500/5 rounded-xl transition-all cursor-pointer text-center"
-                  >
-                    Sair
-                  </button>
-                )}
-              </div>
             </div>
-          )}
+
+            {/* Editar button below user details inside card */}
+            <button
+              onClick={onEditProfile}
+              className="w-full text-xs font-bold text-violet-400 hover:text-white border border-violet-500/15 hover:border-violet-400/35 py-2.5 bg-[#141414] rounded-xl transition-all cursor-pointer text-center font-sans tracking-wide active:scale-98"
+            >
+              Editar Perfil
+            </button>
+          </div>
         </div>
 
         {/* Access row to Invite Code screen */}
@@ -482,7 +453,7 @@ export default function PerfilView({
           </div>
 
           <button
-            onClick={() => setIsViewingHistory(true)}
+            onClick={onViewHistory}
             className="w-full bg-[#161616] hover:bg-zinc-805 text-xs font-bold text-violet-405 hover:text-white py-2.5 border border-[#202020] rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
           >
             <span>Ver histórico completo</span>
@@ -538,6 +509,24 @@ export default function PerfilView({
           </div>
         </div>
 
+        {/* Botão de Sair no final da tela de perfil */}
+        {onSignOut && (
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="w-full py-3 bg-[#111111] hover:bg-rose-500/5 text-xs font-bold text-rose-500/80 border border-rose-500/10 hover:border-rose-500/30 rounded-xl transition-all cursor-pointer text-center"
+          >
+            Sair da Conta
+          </button>
+        )}
+
+        {/* Versão do App */}
+        <div className="text-center pt-2 pb-1">
+          <span className="text-[10px] text-zinc-600 font-mono font-bold tracking-wider">
+            VERSÃO v1.5
+          </span>
+        </div>
+
       </div>
 
       {/* MODAL: VER DETALHES DO PRÊMIO */}
@@ -582,7 +571,7 @@ export default function PerfilView({
 
               <div className="space-y-3 pt-2">
                 <p className="font-bold text-violet-400 text-xs uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" /> Como conquistar o kit:
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" /> Como conquistar o Prêmio:
                 </p>
                 <div className="text-xs text-slate-400 bg-black p-3.5 rounded-xl border border-zinc-900 leading-relaxed">
                   {activePrize.details}
@@ -638,7 +627,7 @@ export default function PerfilView({
               <form onSubmit={handleRegisterRecord} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-400 block mb-1.5">
-                    Peso de treino (em kg)
+                    Último Peso (em kg)
                   </label>
                   <input
                     type="number"
@@ -646,22 +635,6 @@ export default function PerfilView({
                     placeholder="Ex: 78.5"
                     value={newWeight}
                     onChange={(e) => setNewWeight(e.target.value)}
-                    className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-650 focus:border-violet-400 outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-400 block mb-1.5">
-                    Altura atual (em cm)
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={3}
-                    inputMode="numeric"
-                    placeholder="Ex: 182"
-                    value={newHeight}
-                    onChange={(e) => setNewHeight(e.target.value.replace(/[^0-9]/g, ""))}
                     className="w-full bg-[#1A1A1A] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-650 focus:border-violet-400 outline-none"
                     required
                   />
@@ -691,90 +664,7 @@ export default function PerfilView({
                 </div>
               </form>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* MODAL: HISTÓRICO COMPLETO */}
-      <AnimatePresence>
-        {isViewingHistory && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-[#0A0A0A]/90 z-40 flex items-center justify-center p-4 backdrop-blur-md"
-          >
-            <motion.div
-              initial={{ scale: 0.92, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 15 }}
-              className="bg-[#111111] border border-[#202020] rounded-2xl p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto space-y-4 shadow-2xl relative"
-            >
-              <button
-                onClick={() => setIsViewingHistory(false)}
-                className="absolute right-4 top-4 text-slate-400 hover:text-white cursor-pointer p-1.5 bg-[#1A1A1A] rounded-full border border-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="flex items-center gap-2.5">
-                <Calendar className="w-5 h-5 text-violet-400" />
-                <h3 className="font-extrabold text-base text-white tracking-tight">
-                  Medições Históricas
-                </h3>
-              </div>
-
-              <div className="space-y-3 pr-0.5 max-h-[50vh] overflow-y-auto scrollbar-none">
-                {records.length === 0 ? (
-                  <div className="text-center py-6 text-slate-550 text-xs">
-                    Nenhum registro encontrado.
-                  </div>
-                ) : (
-                  records.map((rec) => {
-                    const localHeightM = getHeightInMeters(rec.height);
-                    const localImc = localHeightM > 0 ? Number((rec.weight / (localHeightM * localHeightM)).toFixed(1)) : 0;
-                    return (
-                      <div
-                        key={rec.id}
-                        className="bg-black p-3.5 rounded-xl border border-zinc-900 flex items-center justify-between"
-                      >
-                        <div className="space-y-1">
-                          <p className="text-xs text-white font-bold">{formatDate(rec.date)}</p>
-                          <p className="text-[10px] text-slate-400">
-                            Peso: {rec.weight} kg • Altura: {formatHeight(rec.height)}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <span className="text-[9px] block text-slate-500 font-bold uppercase">IMC</span>
-                            <span className="text-xs font-bold text-violet-400">{localImc}</span>
-                          </div>
-
-                          {onDeleteWeightRecord && records.length > 1 && (
-                            <button
-                              onClick={() => onDeleteWeightRecord(rec.id)}
-                              className="text-slate-605 hover:text-rose-450 p-1.5 bg-[#161616] rounded-lg hover:bg-rose-500/10 cursor-pointer transition-colors"
-                              title="Remover registro"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <button
-                onClick={() => setIsViewingHistory(false)}
-                className="w-full bg-[#161616] hover:bg-zinc-800 border border-[#202020] rounded-xl text-slate-350 font-bold py-3 text-xs cursor-pointer transition-all mt-4"
-              >
-                Voltar ao Painel
-              </button>
             </motion.div>
-          </motion.div>
         )}
       </AnimatePresence>
 
