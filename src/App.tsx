@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { GymPost, UserProfile, WeightRecord, TeamMember, MonthPrize } from "./types";
-import { SEED_POSTS, DEFAULT_MEMBERS, MONTH_PRIZE } from "./data";
+import { DEFAULT_MEMBERS, MONTH_PRIZE } from "./data";
 import TimelineView from "./components/TimelineView";
 import DesafiosView from "./components/DesafiosView";
 import PerfilView from "./components/PerfilView";
@@ -60,9 +60,9 @@ export default function App() {
   const [posts, setPosts] = useState<GymPost[]>(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
     if (saved) {
-      try { return JSON.parse(saved); } catch { return SEED_POSTS; }
+      try { return JSON.parse(saved); } catch { return []; }
     }
-    return SEED_POSTS;
+    return [];
   });
 
   // State for loaded user profile
@@ -250,12 +250,22 @@ export default function App() {
       collection(db, "posts"),
       (snapshot) => {
         const list: GymPost[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
+        snapshot.forEach((snapshotDoc) => {
+          const data = snapshotDoc.data();
+          const authorEmail = data.userEmail || "";
+          
+          // Delete mock/seeded posts that belong to default users (Marcus, Elena, Juliana)
+          if (authorEmail && authorEmail !== userProfile.email) {
+            deleteDoc(doc(db, "posts", snapshotDoc.id)).catch(err => 
+              console.warn("Could not delete legacy post:", err)
+            );
+            return;
+          }
+
           list.push({
-            id: doc.id,
+            id: snapshotDoc.id,
             userName: data.userName || "",
-            userEmail: data.userEmail || "",
+            userEmail: authorEmail,
             dateTime: data.dateTime || "",
             text: data.text || "",
             imageUrl: data.imageUrl || undefined,
@@ -272,62 +282,6 @@ export default function App() {
         // Sort descending by date
         list.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
 
-        // Auto-seed SEED_POSTS if the collection is completely empty on first launch
-        if (list.length === 0) {
-          const checkAndSeed = async () => {
-            const querySnap = await getDocs(collection(db, "posts"));
-            if (querySnap.empty) {
-              for (const post of SEED_POSTS) {
-                const docRef = doc(db, "posts", post.id);
-                await setDoc(docRef, {
-                  userName: post.userName,
-                  userEmail: post.userEmail,
-                  dateTime: post.dateTime,
-                  text: post.text,
-                  imageUrl: post.imageUrl || null,
-                  likes: post.likes || 0,
-                  likesList: post.id === "post_2" ? ["lucas_deangeli@4scale.com.br"] : [],
-                  commentsCount: post.comments || 0,
-                  commentsList: Array.from({ length: post.comments || 2 }).map((_, i) => ({
-                    username: i % 2 === 0 ? "Juliana Lima" : "Marcus Thorne",
-                    text: i % 2 === 0 ? "Caraca! Treino monstro demais! 🔥💪" : "Inspiração foda para a semana!",
-                    dateTime: new Date(Date.now() - i * 600000).toISOString()
-                  })),
-                  duration: post.duration || null,
-                  intensity: post.intensity || null,
-                });
-
-                // Seed associated frequency
-                const postDate = new Date(post.dateTime);
-                const weekdaysPT = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
-                const dayOfWeek = weekdaysPT[postDate.getDay()];
-                const weekdaysFull = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
-                const dayName = weekdaysFull[postDate.getDay()];
-
-                await setDoc(doc(db, "users", post.userEmail, "frequencies", post.id), {
-                  postId: post.id,
-                  date: post.dateTime,
-                  dayOfWeek,
-                  dayName,
-                  userEmail: post.userEmail,
-                  userName: post.userName,
-                });
-              }
-
-              // Seed initial user profile weight history to Firestore subcollection
-              for (const rec of INITIAL_PROFILE.weightRecords || []) {
-                await setDoc(doc(db, "users", INITIAL_PROFILE.email, "weightRecords", rec.id), {
-                  id: rec.id,
-                  weight: rec.weight,
-                  height: rec.height,
-                  date: rec.date,
-                });
-              }
-            }
-          };
-          checkAndSeed().catch(err => console.warn("Auto seeding failed:", err));
-        }
-
         setPosts(list);
         setUseLocalFallback(false);
       },
@@ -342,10 +296,10 @@ export default function App() {
           try {
             setPosts(JSON.parse(savedPosts));
           } catch {
-            setPosts(SEED_POSTS);
+            setPosts([]);
           }
         } else {
-          setPosts(SEED_POSTS);
+          setPosts([]);
         }
       }
     );
@@ -729,98 +683,17 @@ export default function App() {
     }
   };
 
-  // Sandbox helper: clear all posts (Firestore with Local Fallback)
-  const handleClearAllPosts = async () => {
-    setPosts([]);
-    localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify([]));
 
-    if (useLocalFallback) return;
-
-    try {
-      const postsSnapshot = await getDocs(collection(db, "posts"));
-      const deletePromises = postsSnapshot.docs.map((postDoc) =>
-        deleteDoc(doc(db, "posts", postDoc.id))
-      );
-      await Promise.all(deletePromises);
-    } catch (e) {
-      console.warn("Firestore clear posts failed, relying on local simulation", e);
-    }
-  };
-
-  // Sandbox helper: restore demonstration data (Firestore with Local Fallback)
-  const handleLoadDemoData = async () => {
-    setPosts(SEED_POSTS);
-    localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(SEED_POSTS));
-
-    if (useLocalFallback) return;
-
-    try {
-      const postsSnapshot = await getDocs(collection(db, "posts"));
-      const deletePromises = postsSnapshot.docs.map((postDoc) =>
-        deleteDoc(doc(db, "posts", postDoc.id))
-      );
-      await Promise.all(deletePromises);
-
-      for (const post of SEED_POSTS) {
-        const docRef = doc(db, "posts", post.id);
-        await setDoc(docRef, {
-          userName: post.userName,
-          userEmail: post.userEmail,
-          dateTime: post.dateTime,
-          text: post.text,
-          imageUrl: post.imageUrl || null,
-          likes: post.likes || 0,
-          likesList: post.id === "post_2" ? ["lucas_deangeli@4scale.com.br"] : [],
-          commentsCount: post.comments || 0,
-          commentsList: Array.from({ length: post.comments || 2 }).map((_, i) => ({
-            username: i % 2 === 0 ? "Juliana Lima" : "Marcus Thorne",
-            text: i % 2 === 0 ? "Caraca! Treino monstro demais! 🔥💪" : "Inspiração foda para a semana!",
-            dateTime: new Date(Date.now() - i * 600000).toISOString()
-          })),
-          duration: post.duration || null,
-          intensity: post.intensity || null,
-        });
-
-        // Seed associated frequency
-        const postDate = new Date(post.dateTime);
-        const weekdaysPT = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
-        const dayOfWeek = weekdaysPT[postDate.getDay()];
-        const weekdaysFull = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
-        const dayName = weekdaysFull[postDate.getDay()];
-
-        await setDoc(doc(db, "users", post.userEmail, "frequencies", post.id), {
-          postId: post.id,
-          date: post.dateTime,
-          dayOfWeek,
-          dayName,
-          userEmail: post.userEmail,
-          userName: post.userName,
-        });
-      }
-
-      // Seed initial user profile weight history to Firestore subcollection
-      for (const rec of INITIAL_PROFILE.weightRecords || []) {
-        await setDoc(doc(db, "users", INITIAL_PROFILE.email, "weightRecords", rec.id), {
-          id: rec.id,
-          weight: rec.weight,
-          height: rec.height,
-          date: rec.date,
-        });
-      }
-    } catch (e) {
-      console.warn("Firestore restore demo failed, relying on local simulation", e);
-    }
-  };
 
   // Calculate percentage toward team wellness meta target of the week (mock metadata)
   const mockTeamGoalPercent = 72;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-slate-100 flex items-center justify-center p-0 md:p-6 font-sans selection:bg-violet-500/20 selection:text-violet-300">
+    <div className="min-h-screen bg-[#060606] text-slate-100 flex items-center justify-center font-sans selection:bg-violet-500/20 selection:text-violet-300">
       
-      {/* MOBILE SMARTPHONE SIMULATOR CONTAINER WRAPPER */}
+      {/* FOCUS CONTAINER: FULL SCREEN ON MOBILE, CLASSIC CELL PHONE PROPORTIONS IN DESKTOP */}
       <div 
-        className="w-full h-screen md:h-[844px] md:max-w-[412px] bg-[#0A0A0A] md:rounded-[40px] md:border-[10px] md:border-[#111111] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] relative flex flex-col overflow-hidden border-slate-850"
+        className="w-full h-screen md:h-[92vh] md:max-h-[880px] md:max-w-[420px] bg-[#0A0A0A] md:rounded-3xl md:border md:border-[#1E1E1E] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] relative flex flex-col overflow-hidden"
         id="smartphone-shell"
       >
         {useLocalFallback && permissionError && (

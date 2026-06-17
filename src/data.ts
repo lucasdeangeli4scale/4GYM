@@ -5,32 +5,7 @@
 
 import { TeamMember, Trophy, MonthPrize, GymPost } from "./types";
 
-export const DEFAULT_MEMBERS: TeamMember[] = [
-  {
-    id: "lucas_de",
-    name: "Lucas de Angeli",
-    email: "lucas_deangeli@4scale.com.br",
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "marcus_t",
-    name: "Marcus Thorne",
-    email: "marcus.thorne@4scale.com.br",
-    avatar: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "elena_s",
-    name: "Elena Silva",
-    email: "elena.silva@4scale.com.br",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "juliana_l",
-    name: "Juliana Lima",
-    email: "juliana.lima@4scale.com.br",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-  }
-];
+export const DEFAULT_MEMBERS: TeamMember[] = [];
 
 export const PRESET_WORKOUTS = [
   {
