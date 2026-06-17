@@ -276,6 +276,7 @@ export default function App() {
             commentsList: data.commentsList || [],
             duration: data.duration || undefined,
             intensity: data.intensity || undefined,
+            modality: data.modality || undefined,
           } as GymPost);
         });
 

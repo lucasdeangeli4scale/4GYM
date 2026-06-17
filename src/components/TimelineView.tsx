@@ -31,6 +31,19 @@ interface TimelineViewProps {
   onEditRequest?: (post: GymPost) => void;
 }
 
+const getModalityDesign = (modality?: string) => {
+  const norm = modality?.trim().toLowerCase() || "academia";
+  if (norm.includes("academia")) return { emoji: "🏋️‍♂️", text: "Academia", style: "border-violet-950 text-violet-400 bg-[#161616]" };
+  if (norm.includes("pilates")) return { emoji: "🧘", text: "Pilates", style: "border-indigo-950 text-indigo-400 bg-[#161616]" };
+  if (norm.includes("yoga")) return { emoji: "🧘", text: "Yoga", style: "border-emerald-950 text-emerald-400 bg-[#161616]" };
+  if (norm.includes("canoa")) return { emoji: "🚣", text: "Canoa", style: "border-blue-950 text-blue-400 bg-[#161616]" };
+  if (norm.includes("surf")) return { emoji: "🏄", text: "Surf", style: "border-sky-950 text-sky-400 bg-[#161616]" };
+  if (norm.includes("corrida")) return { emoji: "🏃", text: "Corrida", style: "border-amber-950 text-amber-400 bg-[#161616]" };
+  if (norm.includes("fit dance") || norm.includes("dance")) return { emoji: "💃", text: "Fit Dance", style: "border-fuchsia-950 text-fuchsia-400 bg-[#161616]" };
+  if (norm.includes("funcional")) return { emoji: "🤸", text: "Funcional", style: "border-teal-950 text-teal-400 bg-[#161616]" };
+  return { emoji: "💪", text: modality || "Academia", style: "border-violet-950 text-violet-400 bg-[#161616]" };
+};
+
 export default function TimelineView({
   posts,
   onOpenAddPost,
@@ -288,32 +301,18 @@ export default function TimelineView({
                       {post.text}
                     </p>
 
-                    {/* Duration + Intensity + Modality Pills */}
-                    {(post.duration || post.intensity || post.modality) && (
-                      <div className="flex flex-wrap items-center gap-2 mb-4">
-                        {post.modality && (
-                          <span className="text-[10px] bg-[#161616] border border-violet-950 text-violet-400 px-2.5 py-1 rounded-lg font-sans font-bold flex items-center gap-1">
-                            🏷️ {post.modality}
+                    {/* Atividade/Modalidade Praticada Pill */}
+                    {(() => {
+                      const modInfo = getModalityDesign(post.modality);
+                      return (
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <span className={`text-[10px] px-3 py-1 rounded-lg font-sans font-bold border flex items-center gap-1.5 ${modInfo.style}`}>
+                            <span>{modInfo.emoji}</span>
+                            <span>{modInfo.text}</span>
                           </span>
-                        )}
-                        {post.duration && (
-                          <span className="text-[10px] bg-[#161616] border border-slate-800/80 text-violet-300 px-2.5 py-1 rounded-lg font-mono font-medium flex items-center gap-1">
-                            ⏱️ {post.duration} min
-                          </span>
-                        )}
-                        {post.intensity && (
-                          <span className={`text-[10px] px-2.5 py-1 rounded-lg font-mono font-medium border flex items-center gap-1 ${
-                            post.intensity === "High" 
-                              ? "bg-[#161616] border-rose-950 text-rose-400" 
-                              : post.intensity === "Medium"
-                              ? "bg-[#161616] border-amber-950 text-amber-400"
-                              : "bg-[#161616] border-emerald-950 text-emerald-400"
-                          }`}>
-                            ⚡ {post.intensity === "High" ? "Alta" : post.intensity === "Medium" ? "Média" : "Baixa"}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Image Attachment (As shown in Image 1, styled perfectly) */}
                     {post.imageUrl && (

@@ -6,15 +6,15 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, doc, getDocFromServer } from "firebase/firestore";
-// Your web app's Firebase configuration
+// Web app's Firebase configuration loaded securely from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyAB6GsBNnOuTatJIyO0FqLJSPDHx2jR-wM",
-  authDomain: "gym-28bcf.firebaseapp.com",
-  projectId: "gym-28bcf",
-  storageBucket: "gym-28bcf.firebasestorage.app",
-  messagingSenderId: "1067893820539",
-  appId: "1:1067893820539:web:9c23b42e7dd682932466de",
-  firestoreDatabaseId: "(default)"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBGYPisDMoRW5hS_TfOuR1G6Olg8_cSFYw",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "gen-lang-client-0963630493.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "gen-lang-client-0963630493",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "gen-lang-client-0963630493.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "877281067738",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:877281067738:web:2cb49f1b29a0cd2ace1be3",
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-2f7e2437-9401-4c4b-9b37-e18e7f23c97a"
 };
 
 // Initialize Firebase
