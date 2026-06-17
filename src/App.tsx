@@ -691,9 +691,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#060606] text-slate-100 flex items-center justify-center font-sans selection:bg-violet-500/20 selection:text-violet-300">
       
-      {/* FOCUS CONTAINER: FULL SCREEN ON MOBILE, CLASSIC CELL PHONE PROPORTIONS IN DESKTOP */}
+      {/* FOCUS CONTAINER: FULL SCREEN ON MOBILE & TABLET, CLASSIC CELL PHONE PROPORTIONS IN DESKTOP */}
       <div 
-        className="w-full h-screen md:h-[92vh] md:max-h-[880px] md:max-w-[420px] bg-[#0A0A0A] md:rounded-3xl md:border md:border-[#1E1E1E] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] relative flex flex-col overflow-hidden"
+        className="w-full h-screen lg:h-[92vh] lg:max-h-[880px] lg:max-w-[420px] bg-[#0A0A0A] lg:rounded-3xl lg:border lg:border-[#1E1E1E] lg:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] relative flex flex-col overflow-hidden"
         id="smartphone-shell"
       >
         {useLocalFallback && permissionError && (
