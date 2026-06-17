@@ -10,7 +10,8 @@ import {
   Upload,
   Check,
   RotateCcw,
-  Trash2
+  Trash2,
+  SwitchCamera
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { GymPost } from "../types";
@@ -18,10 +19,21 @@ import { GymPost } from "../types";
 interface PostModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmitPost: (text: string, imageUrl?: string, duration?: number, intensity?: "Low" | "Medium" | "High") => void;
+  onSubmitPost: (text: string, imageUrl?: string, duration?: number, intensity?: "Low" | "Medium" | "High", modality?: string) => void;
   postToEdit?: GymPost;
   onDeletePost?: (id: string) => void;
 }
+
+const MODALITIES = [
+  "Academia",
+  "Canoa",
+  "Corrida",
+  "Fit Dance",
+  "Funcional",
+  "Pilates",
+  "Surf",
+  "Yoga"
+];
 
 export default function PostModal({
   isOpen,
@@ -32,6 +44,7 @@ export default function PostModal({
 }: PostModalProps) {
   const [text, setText] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [modality, setModality] = useState("Academia");
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -41,8 +54,11 @@ export default function PostModal({
   const [useWebcam, setUseWebcam] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // Clean form state or prefill on modal display triggers
   useEffect(() => {
@@ -51,11 +67,14 @@ export default function PostModal({
       setText("");
       setSelectedImage(null);
       setUseWebcam(false);
+      setFacingMode("user");
       setShowAbandonConfirm(false);
       setShowDeleteConfirm(false);
+      setModality("Academia");
     } else if (postToEdit) {
       setText(postToEdit.text);
       setSelectedImage(postToEdit.imageUrl || null);
+      setModality(postToEdit.modality || "Academia");
     }
   }, [isOpen, postToEdit]);
 
@@ -63,11 +82,11 @@ export default function PostModal({
     setShowAbandonConfirm(true);
   };
 
-  const startCamera = async () => {
+  const startCamera = async (mode: "user" | "environment" = facingMode) => {
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: "user" },
+        video: { width: 640, height: 480, facingMode: mode },
         audio: false,
       });
       setCameraStream(stream);
@@ -88,6 +107,16 @@ export default function PostModal({
     }
   };
 
+  const toggleCameraFacingMode = async () => {
+    const newMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newMode);
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+      await startCamera(newMode);
+    }
+  };
+
   const stopCamera = () => {
     if (cameraStream) {
       cameraStream.getTracks().forEach((track) => track.stop());
@@ -105,7 +134,14 @@ export default function PostModal({
         canvas.height = video.videoHeight || 480;
         const ctx = canvas.getContext("2d");
         if (ctx) {
+          // If using front camera, mirror horizontally for natural photo preview alignment
+          if (facingMode === "user") {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+          }
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          
           const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
           setSelectedImage(dataUrl);
           stopCamera();
@@ -140,7 +176,8 @@ export default function PostModal({
       text.trim(),
       selectedImage || undefined,
       postToEdit?.duration || 45,
-      postToEdit?.intensity || "High"
+      postToEdit?.intensity || "High",
+      modality
     );
     onClose();
   };
@@ -203,6 +240,31 @@ export default function PostModal({
                 />
               </div>
 
+              {/* Modality Dropdown Select */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 tracking-wider block font-sans">
+                  Modalidade
+                </label>
+                <div className="relative">
+                  <select
+                    value={modality}
+                    onChange={(e) => setModality(e.target.value)}
+                    className="w-full bg-[#111111] border border-[#202020] rounded-xl px-4 pr-10 py-3.5 text-sm text-white focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none transition-colors appearance-none cursor-pointer"
+                  >
+                    {MODALITIES.map((item) => (
+                      <option key={item} value={item} className="bg-[#0A0A0A] text-white">
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                    <svg className="w-4 h-4 text-slate-450" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
               {/* Proof of Work Capture Area */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-400 tracking-wider block font-sans flex items-center justify-between">
@@ -217,12 +279,12 @@ export default function PostModal({
                     </button>
                   )}
                 </label>
- 
+
                 {/* Interactive Dashed Box */}
                 <div 
                   onClick={() => {
                     if (!selectedImage && !useWebcam) {
-                      fileInputRef.current?.click();
+                      nativeCameraInputRef.current?.click();
                     }
                   }}
                   className={`bg-[#0A0A0A] border-[1px] border-dashed rounded-xl overflow-hidden min-h-[220px] flex flex-col items-center justify-center relative p-5 cursor-pointer hover:border-violet-400/80 transition-all ${
@@ -234,33 +296,52 @@ export default function PostModal({
                     <div className="absolute inset-0 flex flex-col bg-[#020202] z-20">
                       <video
                         ref={videoRef}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${facingMode === "user" ? "-scale-x-100" : ""}`}
                         playsInline
                         muted
                       />
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-3 bg-slate-900/90 py-1.5 px-4 rounded-full border border-slate-800 shadow-xl z-30">
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-[#0C0C0E]/95 backdrop-blur-md py-1.5 px-3 rounded-full border border-slate-800 shadow-xl z-30">
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             takeSnapshot();
-                            stopCamera();
                           }}
-                          className="bg-violet-400 hover:bg-violet-500 text-black px-4 py-1 text-xs font-extrabold rounded-full flex items-center gap-1.5 cursor-pointer"
+                          className="bg-violet-400 hover:bg-violet-500 text-black px-3 py-1.5 text-xs font-extrabold rounded-full flex items-center gap-1.5 cursor-pointer transition-colors"
                         >
                           <Camera className="w-3.5 h-3.5 text-black" /> Capturar Foto
                         </button>
+                        
                         <span className="w-[1px] h-3 bg-zinc-700" />
+                        
                         <button
                           type="button"
-                          onClick={stopCamera}
-                          className="text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCameraFacingMode();
+                          }}
+                          className="text-violet-400 hover:text-violet-300 p-1.5 rounded-full cursor-pointer transition-colors flex items-center justify-center bg-zinc-900/65"
+                          title="Virar Câmera (Frontal / Traseira)"
+                        >
+                          <SwitchCamera className="w-4 h-4 text-violet-400" />
+                        </button>
+
+                        <span className="w-[1px] h-3 bg-zinc-700" />
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            stopCamera();
+                          }}
+                          className="text-slate-400 hover:text-white text-xs font-semibold cursor-pointer px-1.5"
                         >
                           Cancelar
                         </button>
                       </div>
                     </div>
                   )}
- 
+  
                   {/* Selected image preview */}
                   {selectedImage ? (
                     <div className="w-full h-full aspect-[1.35/1] overflow-hidden relative">
@@ -280,22 +361,22 @@ export default function PostModal({
                       <div className="w-13 h-13 rounded-full bg-[#111111] border border-zinc-800 flex items-center justify-center group-hover:border-violet-400 transition-colors">
                         <Camera className="w-6 h-6 text-violet-400 stroke-[2.2]" />
                       </div>
- 
+  
                       <div className="space-y-1">
                         <p className="text-sm font-bold text-slate-200">
                           Registre seu momento
                         </p>
                       </div>
- 
-                      {/* Small triggers to provide alternative Webcam option or select preset */}
-                      <div className="flex items-center gap-3 mt-1.5">
+  
+                      {/* Triggers with Native App option, Webcam option, and Gallery */}
+                      <div className="flex flex-wrap items-center justify-center gap-2 mt-1.5 max-w-sm">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            startCamera();
+                            nativeCameraInputRef.current?.click();
                           }}
-                          className="text-[10px] uppercase font-bold tracking-wider text-violet-450 hover:text-violet-350 bg-[#141414] border border-zinc-800 rounded-lg px-2.5 py-1"
+                          className="text-[10px] uppercase font-bold tracking-wider text-violet-400 hover:text-white bg-[#141414] border border-violet-500/30 rounded-lg px-2.5 py-1.5 transition-colors"
                         >
                           Abrir Câmera
                         </button>
@@ -303,14 +384,24 @@ export default function PostModal({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
+                            startCamera();
+                          }}
+                          className="text-[10px] uppercase font-bold tracking-wider text-slate-350 hover:text-white bg-[#141414] border border-zinc-800 rounded-lg px-2.5 py-1.5 transition-colors"
+                        >
+                          Câmera no App
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             fileInputRef.current?.click();
                           }}
-                          className="text-[10px] uppercase font-bold tracking-wider text-slate-400 hover:text-white bg-[#141414] border border-zinc-800 rounded-lg px-2.5 py-1"
+                          className="text-[10px] uppercase font-bold tracking-wider text-slate-400 hover:text-white bg-[#141414] border border-[#1E1E1E] rounded-lg px-2.5 py-1.5 transition-colors"
                         >
                           Galeria
                         </button>
                       </div>
- 
+  
                       {cameraError && (
                         <p className="text-[10px] text-rose-450 bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/10 mt-1">
                           {cameraError}
@@ -318,13 +409,21 @@ export default function PostModal({
                       )}
                     </div>
                   ) : null}
- 
-                  {/* Hidden input */}
+  
+                  {/* Hidden inputs */}
                   <input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileUpload}
+                     accept="image/*"
+                    className="hidden"
+                  />
+                  <input
+                    type="file"
+                    ref={nativeCameraInputRef}
+                    onChange={handleFileUpload}
                     accept="image/*"
+                    capture="environment"
                     className="hidden"
                   />
                 </div>

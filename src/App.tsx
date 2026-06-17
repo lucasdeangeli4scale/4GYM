@@ -365,7 +365,8 @@ export default function App() {
     text: string, 
     imageUrl?: string,
     duration?: number,
-    intensity?: "Low" | "Medium" | "High"
+    intensity?: "Low" | "Medium" | "High",
+    modality?: string
   ) => {
     const id = "post_" + Date.now();
     const newPost: GymPost = {
@@ -382,6 +383,7 @@ export default function App() {
       commentsList: [],
       duration,
       intensity,
+      modality,
     };
 
     // Failover local write
@@ -404,6 +406,7 @@ export default function App() {
         commentsList: [],
         duration: duration || null,
         intensity: intensity || null,
+        modality: modality || null,
       });
 
       // Write associated frequency calculation
@@ -448,13 +451,14 @@ export default function App() {
   };
 
   // Edit an existing post (Firestore with Local Fallback)
-  const handleEditPost = async (id: string, text: string, imageUrl?: string) => {
+  const handleEditPost = async (id: string, text: string, imageUrl?: string, modality?: string) => {
     const updated = posts.map((p) => {
       if (p.id === id) {
         return {
           ...p,
           text,
           imageUrl: imageUrl || undefined,
+          modality: modality || p.modality,
         };
       }
       return p;
@@ -469,6 +473,7 @@ export default function App() {
       await updateDoc(postRef, {
         text,
         imageUrl: imageUrl || null,
+        modality: modality || null,
       });
     } catch (e) {
       console.warn("Firestore edit failed, relying on local simulation", e);
@@ -846,11 +851,11 @@ export default function App() {
             setIsAddPostOpen(false);
             setPostToEdit(null);
           }}
-          onSubmitPost={(text, imageUrl, duration, intensity) => {
+          onSubmitPost={(text, imageUrl, duration, intensity, modality) => {
             if (postToEdit) {
-              handleEditPost(postToEdit.id, text, imageUrl);
+               handleEditPost(postToEdit.id, text, imageUrl, modality);
             } else {
-              handleAddPost(text, imageUrl, duration, intensity);
+               handleAddPost(text, imageUrl, duration, intensity, modality);
             }
           }}
           postToEdit={postToEdit || undefined}

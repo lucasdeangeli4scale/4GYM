@@ -17,6 +17,7 @@ export interface GymPost {
   commentsList?: Array<{ username: string; userEmail?: string; text: string; dateTime?: string }>;
   duration?: number;
   intensity?: "Low" | "Medium" | "High";
+  modality?: string;
 }
 
 export interface WeightRecord {

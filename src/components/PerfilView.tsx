@@ -523,7 +523,7 @@ export default function PerfilView({
         {/* Versão do App */}
         <div className="text-center pt-2 pb-1">
           <span className="text-[10px] text-zinc-600 font-mono font-bold tracking-wider">
-            VERSÃO v1.6
+            VERSÃO v1.7
           </span>
         </div>
 

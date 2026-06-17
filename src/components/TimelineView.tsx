@@ -288,9 +288,14 @@ export default function TimelineView({
                       {post.text}
                     </p>
 
-                    {/* Duration + Intensity Pills */}
-                    {(post.duration || post.intensity) && (
+                    {/* Duration + Intensity + Modality Pills */}
+                    {(post.duration || post.intensity || post.modality) && (
                       <div className="flex flex-wrap items-center gap-2 mb-4">
+                        {post.modality && (
+                          <span className="text-[10px] bg-[#161616] border border-violet-950 text-violet-400 px-2.5 py-1 rounded-lg font-sans font-bold flex items-center gap-1">
+                            🏷️ {post.modality}
+                          </span>
+                        )}
                         {post.duration && (
                           <span className="text-[10px] bg-[#161616] border border-slate-800/80 text-violet-300 px-2.5 py-1 rounded-lg font-mono font-medium flex items-center gap-1">
                             ⏱️ {post.duration} min

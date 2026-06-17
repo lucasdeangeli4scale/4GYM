@@ -50,6 +50,11 @@
           "type": "string",
           "enum": ["Low", "Medium", "High"],
           "description": "Intensity level of workout"
+        },
+        "modality": {
+          "type": "string",
+          "enum": ["Academia", "Canoa", "Corrida", "Fit Dance", "Funcional", "Pilates", "Surf", "Yoga"],
+          "description": "Modality of the physical activity"
         }
       },
       "required": ["id", "userName", "userEmail", "dateTime", "text"]
