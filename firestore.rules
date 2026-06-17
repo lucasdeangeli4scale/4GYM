@@ -11,6 +11,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /config/{configId} {
+      allow read, write: if true;
+    }
+
     match /users/{userId} {
       allow read, write: if true;
 

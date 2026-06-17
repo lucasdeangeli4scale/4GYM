@@ -254,14 +254,6 @@ export default function App() {
           const data = snapshotDoc.data();
           const authorEmail = data.userEmail || "";
           
-          // Delete mock/seeded posts that belong to default users (Marcus, Elena, Juliana)
-          if (authorEmail && authorEmail !== userProfile.email) {
-            deleteDoc(doc(db, "posts", snapshotDoc.id)).catch(err => 
-              console.warn("Could not delete legacy post:", err)
-            );
-            return;
-          }
-
           list.push({
             id: snapshotDoc.id,
             userName: data.userName || "",
