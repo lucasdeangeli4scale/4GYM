@@ -161,12 +161,24 @@ export default function PostModal({
     const files = e.target.files;
     if (files && files.length > 0) {
       const file = files[0];
+      
       const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setSelectedImage(reader.result);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 400; // Constrain size
+          const scaleSize = MAX_WIDTH / img.width;
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scaleSize;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7); // Compress
+          setSelectedImage(dataUrl);
           stopCamera();
-        }
+        };
+        img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -409,7 +421,7 @@ export default function PostModal({
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileUpload}
-                    accept="image/*"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
                     className="hidden"
                   />
                   <input

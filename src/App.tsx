@@ -475,6 +475,7 @@ export default function App() {
 
     try {
       const postRef = doc(db, "posts", id);
+      console.log("Saving post to firestore:", id, "With image:", !!imageUrl);
       await updateDoc(postRef, {
         text,
         imageUrl: imageUrl || null,
