@@ -156,7 +156,7 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
           </div>
           <div>
             <h1 className="text-3xl font-black tracking-tight text-white font-display">
-              4GYM <span className="text-violet-500 text-xs font-mono ml-1">V1.0</span>
+              4GYM <span className="text-violet-500 text-xs font-mono ml-1"></span>
             </h1>
             <p className="text-xs uppercase tracking-widest text-slate-500 font-mono mt-1 font-bold">
               {isLogin ? "Acesse sua conta corporativa" : "Crie seu passaporte fitness"}

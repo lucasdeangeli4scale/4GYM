@@ -309,6 +309,7 @@ export default function App() {
   // Synchronize dynamic profile state with the active userEmail document in Firestore in real-time
   useEffect(() => {
     const emailKey = userProfile.email;
+    if (!emailKey) return; // Prevent invalid reference if email is not set
     const userDocRef = doc(db, "users", emailKey);
 
     const unsubscribe = onSnapshot(
