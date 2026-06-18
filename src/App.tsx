@@ -308,9 +308,8 @@ export default function App() {
 
   // Synchronize dynamic profile state with the active userEmail document in Firestore in real-time
   useEffect(() => {
-    const emailKey = userProfile.email;
-    if (!emailKey) return; // Prevent invalid reference if email is not set
-    const userDocRef = doc(db, "users", emailKey);
+    if (!currentUserEmail) return; // Prevent invalid reference if email is not set
+    const userDocRef = doc(db, "users", currentUserEmail);
 
     const unsubscribe = onSnapshot(
       userDocRef,
@@ -324,9 +323,9 @@ export default function App() {
               .catch((err) => console.warn("Failed to update user invite-code:", err));
           }
           setUserProfile({
-            name: data.name || INITIAL_PROFILE.name,
-            email: data.email || INITIAL_PROFILE.email,
-            avatar: data.avatar || INITIAL_PROFILE.avatar,
+            name: data.name || "Atleta",
+            email: data.email || currentUserEmail,
+            avatar: data.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
             weightRecords: data.weightRecords || [],
             inviteCode: codeValue,
             onboarded: data.onboarded !== undefined ? data.onboarded : ((data.weightRecords && data.weightRecords.length > 0) ? true : false),
@@ -334,31 +333,27 @@ export default function App() {
         } else {
           // If profile doc doesn't exist yet, we can create it in Firestore
           const freshCode = Math.floor(100000 + Math.random() * 900000).toString();
-          setDoc(userDocRef, { ...INITIAL_PROFILE, inviteCode: freshCode, onboarded: false, weightRecords: [] })
+          setDoc(userDocRef, { 
+            name: "Atleta", 
+            email: currentUserEmail,
+            inviteCode: freshCode, 
+            onboarded: false, 
+            weightRecords: [],
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
+          })
             .catch((e) => console.warn("Failed to write users profile on Firestore:", e));
         }
         setUseLocalFallback(false);
       },
       (error) => {
         console.warn("Firestore users sync failed (permissions error expected in sandbox):", error);
-        setPermissionError("Permissão pendente no Firestore. O app ativou o Armazenamento Local temporariamente para você testá-lo perfeitamente.");
+        setPermissionError("Permissão pendente no Firestore.");
         setUseLocalFallback(true);
-
-        const savedProfile = localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY);
-        if (savedProfile) {
-          try {
-            setUserProfile(JSON.parse(savedProfile));
-          } catch {
-            setUserProfile(INITIAL_PROFILE);
-          }
-        } else {
-          setUserProfile(INITIAL_PROFILE);
-        }
       }
     );
 
     return () => unsubscribe();
-  }, [userProfile.email]);
+  }, [currentUserEmail]);
 
   // Create a new gym post (Firestore with Local Fallback)
   const handleAddPost = async (
