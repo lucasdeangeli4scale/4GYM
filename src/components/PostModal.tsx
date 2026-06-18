@@ -372,15 +372,15 @@ export default function PostModal({
                         </p>
                       </div>
   
-                      {/* Triggers with Native App option, Webcam option, and Gallery */}
-                      <div className="flex flex-wrap items-center justify-center gap-2 mt-1.5 max-w-sm">
+                      {/* Triggers with Native App option, and Gallery */}
+                      <div className="flex flex-col items-center justify-center gap-3 mt-1.5 w-full">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             nativeCameraInputRef.current?.click();
                           }}
-                          className="text-[10px] uppercase font-bold tracking-wider text-violet-400 hover:text-white bg-[#141414] border border-violet-500/30 rounded-lg px-2.5 py-1.5 transition-colors"
+                          className="text-xs uppercase font-bold tracking-wider text-violet-400 hover:text-white bg-[#141414] border border-violet-500/30 rounded-lg w-full py-3 transition-colors"
                         >
                           Abrir Câmera
                         </button>
@@ -388,24 +388,14 @@ export default function PostModal({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            startCamera();
-                          }}
-                          className="text-[10px] uppercase font-bold tracking-wider text-slate-350 hover:text-white bg-[#141414] border border-zinc-800 rounded-lg px-2.5 py-1.5 transition-colors"
-                        >
-                          Câmera no App
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
                             fileInputRef.current?.click();
                           }}
-                          className="text-[10px] uppercase font-bold tracking-wider text-slate-400 hover:text-white bg-[#141414] border border-[#1E1E1E] rounded-lg px-2.5 py-1.5 transition-colors"
+                          className="text-xs uppercase font-bold tracking-wider text-slate-350 hover:text-white bg-[#141414] border border-zinc-800 rounded-lg w-full py-3 transition-colors"
                         >
                           Galeria
                         </button>
                       </div>
-  
+
                       {cameraError && (
                         <p className="text-[10px] text-rose-450 bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/10 mt-1">
                           {cameraError}
@@ -419,7 +409,7 @@ export default function PostModal({
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileUpload}
-                     accept="image/*"
+                    accept="image/*"
                     className="hidden"
                   />
                   <input

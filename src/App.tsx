@@ -348,8 +348,17 @@ export default function App() {
       },
       (error) => {
         console.warn("Firestore users sync failed (permissions error expected in sandbox):", error);
-        setPermissionError("Permissão pendente no Firestore.");
+        setPermissionError("Permissão pendente no Firestore. O app ativou o Armazenamento Local temporariamente para você testá-lo perfeitamente.");
         setUseLocalFallback(true);
+
+        const savedProfile = localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY);
+        if (savedProfile) {
+          try {
+            setUserProfile(JSON.parse(savedProfile));
+          } catch {
+            // keep existing profile
+          }
+        }
       }
     );
 
