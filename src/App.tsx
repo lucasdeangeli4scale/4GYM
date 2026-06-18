@@ -15,6 +15,7 @@ import PostModal from "./components/PostModal";
 import AuthView from "./components/AuthView";
 import OnboardingView from "./components/OnboardingView";
 import { InstallPWA } from "./components/InstallPWA";
+import { UpdateNotification } from "./components/UpdateNotification";
 import { Dumbbell, Trophy, User, RotateCcw, HelpCircle, Flame, Dumbbell as DumbbellIcon, ShieldCheck, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -868,6 +869,7 @@ export default function App() {
           onDeletePost={(id) => handleDeletePost(id, userProfile.email)}
         />
         <InstallPWA />
+        <UpdateNotification />
       </div>
 
     </div>

@@ -298,12 +298,7 @@ export default function PostModal({
 
                 {/* Interactive Dashed Box */}
                 <div 
-                  onClick={() => {
-                    if (!selectedImage && !useWebcam) {
-                      nativeCameraInputRef.current?.click();
-                    }
-                  }}
-                  className={`bg-[#0A0A0A] border-[1px] border-dashed rounded-xl overflow-hidden min-h-[220px] flex flex-col items-center justify-center relative p-5 cursor-pointer hover:border-violet-400/80 transition-all ${
+                  className={`bg-[#0A0A0A] border-[1px] border-dashed rounded-xl overflow-hidden min-h-[220px] flex flex-col items-center justify-center relative p-5 transition-all ${
                     selectedImage ? "border-[#202020] p-0" : "border-zinc-800"
                   }`}
                 >
