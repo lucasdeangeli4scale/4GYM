@@ -14,6 +14,7 @@ import EditPerfilView from "./components/EditPerfilView";
 import PostModal from "./components/PostModal";
 import AuthView from "./components/AuthView";
 import OnboardingView from "./components/OnboardingView";
+import { InstallPWA } from "./components/InstallPWA";
 import { Dumbbell, Trophy, User, RotateCcw, HelpCircle, Flame, Dumbbell as DumbbellIcon, ShieldCheck, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -79,13 +80,18 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser && firebaseUser.email) {
         setCurrentUserEmail(firebaseUser.email);
-        setUserProfile((prev) => ({
-          ...prev,
-          email: firebaseUser.email || prev.email,
-          name: firebaseUser.displayName || prev.name || "Atleta"
-        }));
+        // Do not use INITIAL_PROFILE anymore on login.
+        // The user profile should be fetched from Firestore in a separate useEffect.
       } else {
         setCurrentUserEmail(null);
+        setUserProfile({
+           name: "Atleta",
+           email: "",
+           weightRecords: [],
+           inviteCode: "",
+           onboarded: false
+        });
+        localStorage.removeItem(LOCAL_STORAGE_PROFILE_KEY);
       }
       setAuthLoading(false);
     });
@@ -854,6 +860,7 @@ export default function App() {
           postToEdit={postToEdit || undefined}
           onDeletePost={(id) => handleDeletePost(id, userProfile.email)}
         />
+        <InstallPWA />
       </div>
 
     </div>

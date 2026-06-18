@@ -71,6 +71,27 @@ export const DEFAULT_TROPHIES: Trophy[] = [
     icon: "Crown",
     unlocked: false,
   },
+  {
+    id: "90_days",
+    title: "90 dias",
+    description: "3 meses de muita atividade",
+    icon: "CalendarDays",
+    unlocked: false,
+  },
+  {
+    id: "50_checkins",
+    title: "50 checkins",
+    description: "Metade do caminho. Bora!!!",
+    icon: "CheckSquare",
+    unlocked: false,
+  },
+  {
+    id: "100_checkins",
+    title: "100 checkins",
+    description: "Atleta de verdade. Parabéns pela conquista!",
+    icon: "Trophy",
+    unlocked: false,
+  },
 ];
 
 export const SEED_POSTS: GymPost[] = [];

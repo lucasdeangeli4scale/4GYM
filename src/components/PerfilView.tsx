@@ -318,7 +318,9 @@ export default function PerfilView({
             <span className="text-[10px] font-bold bg-violet-400/10 border border-violet-400/20 text-violet-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
               Prêmio do Mês
             </span>
-            <span className="text-[10px] text-slate-500 font-medium">Faltam 14 dias</span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              Faltam {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate()} dias
+            </span>
           </div>
 
           <div className="flex items-center gap-4 mb-4">
@@ -346,6 +348,40 @@ export default function PerfilView({
             className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#161616] hover:bg-zinc-800 text-xs font-bold text-slate-300 border border-zinc-800 rounded-xl transition-all cursor-pointer"
           >
             Ver detalhes <ChevronRight className="w-4 h-4 text-violet-400" />
+          </button>
+        </div>
+
+        {/* Seção de Prêmio do Ano */}
+        <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] font-bold bg-amber-400/10 border border-amber-400/20 text-amber-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              Prêmio do Ano
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              Faltam {Math.ceil((new Date('2026-12-31').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} dias
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#202020] bg-zinc-900 flex-shrink-0 relative flex items-center justify-center">
+              <TrophyIcon className="w-8 h-8 text-amber-500" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h4 className="font-bold text-white text-sm tracking-tight leading-snug">
+                Grande Prêmio 2026
+              </h4>
+              <p className="text-xs text-slate-400 line-clamp-1 mt-1 leading-normal">
+                O melhor de 2026! Quem será o atleta do ano?
+              </p>
+            </div>
+          </div>
+
+          <button
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#161616] hover:bg-zinc-800 text-xs font-bold text-slate-300 border border-zinc-800 rounded-xl transition-all cursor-pointer"
+            onClick={() => alert("Detalhes do prêmio do ano chegando em breve!")}
+          >
+            Ver detalhes <ChevronRight className="w-4 h-4 text-amber-500" />
           </button>
         </div>
 
@@ -523,7 +559,7 @@ export default function PerfilView({
         {/* Versão do App */}
         <div className="text-center pt-2 pb-1">
           <span className="text-[10px] text-zinc-600 font-mono font-bold tracking-wider">
-            VERSÃO v1.8
+            VERSÃO v1.9
           </span>
         </div>
 

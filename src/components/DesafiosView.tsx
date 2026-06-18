@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { GymPost, TeamMember, Trophy } from "../types";
 import { DEFAULT_MEMBERS } from "../data";
+import { TrophyNotification } from "./TrophyNotification";
 import { 
   Dumbbell, 
   Award, 
@@ -17,6 +18,8 @@ import {
   X, 
   CheckCircle, 
   Crown, 
+  CalendarDays,
+  CheckSquare,
   User, 
   Mail, 
   Calendar 
@@ -50,6 +53,8 @@ export default function DesafiosView({
   teamMembers,
 }: DesafiosViewProps) {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [unlockedLastRender, setUnlockedLastRender] = useState<Record<string, boolean>>({});
+  const [activeTrophy, setActiveTrophy] = useState<any>(null);
 
   // Merge current user with preset roster members
   const list = teamMembers && teamMembers.length > 0 ? teamMembers : DEFAULT_MEMBERS;
@@ -175,6 +180,9 @@ export default function DesafiosView({
     const sevenDaysUnlocked = maxStreak >= 7 || memberPosts.length >= 7 || hasWeeklyConsistency;
     const fourteenDaysUnlocked = maxStreak >= 14 || memberPosts.length >= 14;
     const thirtyDaysUnlocked = maxStreak >= 30 || memberPosts.length >= 30;
+    const ninetyDaysUnlocked = maxStreak >= 90 || memberPosts.length >= 90;
+    const fiftyCheckinsUnlocked = memberPosts.length >= 50;
+    const oneHundredCheckinsUnlocked = memberPosts.length >= 100;
 
     const trophies = [
       {
@@ -205,6 +213,27 @@ export default function DesafiosView({
         icon: "Crown",
         unlocked: thirtyDaysUnlocked,
       },
+      {
+        id: "90_days",
+        title: "90 dias",
+        description: "3 meses de muita atividade",
+        icon: "CalendarDays",
+        unlocked: ninetyDaysUnlocked,
+      },
+      {
+        id: "50_checkins",
+        title: "50 checkins",
+        description: "Metade do caminho. Bora!!!",
+        icon: "CheckSquare",
+        unlocked: fiftyCheckinsUnlocked,
+      },
+      {
+        id: "100_checkins",
+        title: "100 checkins",
+        description: "Atleta de verdade. Parabéns pela conquista!",
+        icon: "Trophy",
+        unlocked: oneHundredCheckinsUnlocked,
+      },
     ];
 
     return {
@@ -228,13 +257,32 @@ export default function DesafiosView({
         return <Crown size={size} className={colorClass} />;
       case "CheckCircle":
         return <CheckCircle size={size} className={colorClass} />;
+      case "CalendarDays":
+        return <CalendarDays size={size} className={colorClass} />;
+      case "CheckSquare":
+        return <CheckSquare size={size} className={colorClass} />;
       default:
         return <TrophyIcon size={size} className={colorClass} />;
     }
   };
 
   // Safe calculated details when modal is active
-  const selectedStats = selectedMember ? getMemberStats(selectedMember.email) : null;
+  const selectedStats = useMemo(() => selectedMember ? getMemberStats(selectedMember.email) : null, [selectedMember, posts]);
+
+  useEffect(() => {
+    if (selectedStats && selectedStats.trophies) {
+      selectedStats.trophies.forEach(t => {
+        if (t.unlocked && !unlockedLastRender[t.id]) {
+          setActiveTrophy(t);
+        }
+      });
+      setUnlockedLastRender(prev => {
+        const next = {...prev};
+        selectedStats.trophies.forEach(t => next[t.id] = t.unlocked);
+        return next;
+      });
+    }
+  }, [selectedStats]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#0A0A0A] text-slate-100 font-sans" id="desafios-screen">
@@ -296,12 +344,19 @@ export default function DesafiosView({
 
                   {/* Top user row */}
                   <div className="flex items-center gap-3 mb-4">
-                    <img
-                      src={member.avatar}
-                      alt={member.name}
-                      className="w-10 h-10 rounded-full border border-[#202020] object-cover bg-zinc-900"
-                      referrerPolicy="no-referrer"
-                    />
+                    <div className="relative">
+                      <img
+                        src={member.avatar}
+                        alt={member.name}
+                        className="w-10 h-10 rounded-full border border-[#202020] object-cover bg-zinc-900"
+                        referrerPolicy="no-referrer"
+                      />
+                      {mIdx === 0 && (
+                        <div className="absolute -top-2 -right-2 bg-amber-500 rounded-full p-1 border-2 border-[#111111]">
+                          <TrophyIcon className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
 
                     <div>
                       <h3 className="font-bold text-white text-sm flex items-center gap-2">
@@ -323,6 +378,21 @@ export default function DesafiosView({
                         <Flame className="w-3 h-3 fill-violet-450" /> CONSISTENTE
                       </div>
                     )}
+                  </div>
+
+                  {/* Meta Progress Bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-[10px] text-zinc-500 font-bold mb-1">
+                      <span>Meta</span>
+                      <span>{Math.min(Math.round((memberPosts.length / 20) * 100), 100)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-[#161616] rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full bg-violet-500 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min((memberPosts.length / 20) * 100, 100)}%` }}
+                      />
+                    </div>
                   </div>
 
                   {/* Horizontal Weekly tracker */}
@@ -550,6 +620,8 @@ export default function DesafiosView({
         )}
       </AnimatePresence>
 
+      {/* Trophy Notification */}
+      <TrophyNotification trophy={activeTrophy} onClose={() => setActiveTrophy(null)} />
     </div>
   );
 }

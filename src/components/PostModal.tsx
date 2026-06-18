@@ -26,12 +26,16 @@ interface PostModalProps {
 
 const MODALITIES = [
   "Academia",
+  "Bicicleta",
   "Canoa",
   "Corrida",
+  "CrossFit",
   "Fit Dance",
   "Funcional",
+  "Futebol",
   "Pilates",
   "Surf",
+  "Vôlei",
   "Yoga"
 ];
 
