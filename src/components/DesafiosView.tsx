@@ -558,7 +558,7 @@ export default function DesafiosView({
                       <TrophyIcon className="w-3.5 h-3.5 text-violet-400" /> Troféus Conquistados
                     </h4>
                     <span className="text-[10px] bg-violet-400/10 border border-violet-400/15 text-violet-400 px-2 py-0.5 rounded-full font-mono font-bold">
-                      {selectedStats.unlockedCount} / 4
+                      {selectedStats.unlockedCount} / {selectedStats.trophies.length}
                     </span>
                   </div>
 

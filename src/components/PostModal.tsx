@@ -19,7 +19,7 @@ import { GymPost } from "../types";
 interface PostModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmitPost: (text: string, imageUrl?: string, duration?: number, intensity?: "Low" | "Medium" | "High", modality?: string) => void;
+  onSubmitPost: (text: string, imageUrl?: string, duration?: number, intensity?: "Low" | "Medium" | "High", modality?: string, dateTime?: string) => void;
   postToEdit?: GymPost;
   onDeletePost?: (id: string) => void;
 }
@@ -49,6 +49,18 @@ export default function PostModal({
   const [text, setText] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [modality, setModality] = useState("Academia");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Default to current time for new posts, or postToEdit.dateTime for edit
+    if (postToEdit) {
+      const date = new Date(postToEdit.dateTime);
+      // Adjust timezone for local input
+      date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+      return date.toISOString().slice(0, 16);
+    }
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -193,7 +205,8 @@ export default function PostModal({
       selectedImage || undefined,
       postToEdit?.duration || 45,
       postToEdit?.intensity || "High",
-      modality
+      modality,
+      new Date(selectedDate).toISOString()
     );
     onClose();
   };
@@ -279,6 +292,19 @@ export default function PostModal({
                     </svg>
                   </div>
                 </div>
+              </div>
+
+              {/* Date/Time Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 tracking-wider block font-sans">
+                  Data e Hora do Treino
+                </label>
+                <input
+                  type="datetime-local"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full bg-[#111111] border border-[#202020] rounded-xl px-4 py-3.5 text-sm text-white focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none transition-colors"
+                />
               </div>
 
               {/* Proof of Work Capture Area */}

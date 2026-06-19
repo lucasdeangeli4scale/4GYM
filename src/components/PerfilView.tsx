@@ -316,10 +316,10 @@ export default function PerfilView({
         <div className="bg-[#111111] border border-[#161616] rounded-2xl p-5 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <span className="text-[10px] font-bold bg-violet-400/10 border border-violet-400/20 text-violet-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              Prêmio do Mês
+              Prêmio de {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleString('pt-BR', { month: 'long' })}
             </span>
             <span className="text-[10px] text-slate-500 font-medium">
-              Faltam {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate()} dias
+              Aguardando novo mês
             </span>
           </div>
 
@@ -502,7 +502,7 @@ export default function PerfilView({
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-white text-sm flex items-center gap-2 uppercase tracking-wide">
               <TrophyIcon className="w-4 h-4 text-amber-500" />
-              Troféus Conquistados ({unlockedCount}/4)
+              Troféus Conquistados ({unlockedCount}/{trophies.length})
             </h3>
           </div>
 
@@ -559,7 +559,7 @@ export default function PerfilView({
         {/* Versão do App */}
         <div className="text-center pt-2 pb-1">
           <span className="text-[10px] text-zinc-600 font-mono font-bold tracking-wider">
-            VERSÃO v1.10.3
+            VERSÃO v1.10.4
           </span>
         </div>
 

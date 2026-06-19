@@ -372,14 +372,15 @@ export default function App() {
     imageUrl?: string,
     duration?: number,
     intensity?: "Low" | "Medium" | "High",
-    modality?: string
+    modality?: string,
+    dateTime?: string
   ) => {
     const id = "post_" + Date.now();
     const newPost: GymPost = {
       id,
       userName: userProfile.name,
       userEmail: userProfile.email,
-      dateTime: new Date().toISOString(),
+      dateTime: dateTime || new Date().toISOString(),
       text,
       imageUrl: imageUrl || undefined,
       likes: 0,
@@ -457,7 +458,7 @@ export default function App() {
   };
 
   // Edit an existing post (Firestore with Local Fallback)
-  const handleEditPost = async (id: string, text: string, imageUrl?: string, modality?: string) => {
+  const handleEditPost = async (id: string, text: string, imageUrl?: string, modality?: string, dateTime?: string) => {
     const updated = posts.map((p) => {
       if (p.id === id) {
         return {
@@ -465,6 +466,7 @@ export default function App() {
           text,
           imageUrl: imageUrl || undefined,
           modality: modality || p.modality,
+          dateTime: dateTime || p.dateTime,
         };
       }
       return p;
@@ -858,11 +860,11 @@ export default function App() {
             setIsAddPostOpen(false);
             setPostToEdit(null);
           }}
-          onSubmitPost={(text, imageUrl, duration, intensity, modality) => {
+          onSubmitPost={(text, imageUrl, duration, intensity, modality, dateTime) => {
             if (postToEdit) {
-               handleEditPost(postToEdit.id, text, imageUrl, modality);
+               handleEditPost(postToEdit.id, text, imageUrl, modality, dateTime);
             } else {
-               handleAddPost(text, imageUrl, duration, intensity, modality);
+               handleAddPost(text, imageUrl, duration, intensity, modality, dateTime);
             }
           }}
           postToEdit={postToEdit || undefined}
