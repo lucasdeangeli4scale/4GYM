@@ -170,8 +170,8 @@ export default function PerfilView({
     let unlocked = false;
     if (trophy.id === "first_workout") {
       unlocked = hasFirstStep;
-    } else if (trophy.id === "7_days") {
-      unlocked = maxStreak >= 7 || myPosts.length >= 7 || hasWeeklyConsistency;
+    } else if (trophy.id === "5_days") {
+      unlocked = maxStreak >= 5 || myPosts.length >= 5 || hasWeeklyConsistency;
     } else if (trophy.id === "14_days") {
       unlocked = maxStreak >= 14 || myPosts.length >= 14;
     } else if (trophy.id === "30_days") {
@@ -559,7 +559,7 @@ export default function PerfilView({
         {/* Versão do App */}
         <div className="text-center pt-2 pb-1">
           <span className="text-[10px] text-zinc-600 font-mono font-bold tracking-wider">
-            VERSÃO v1.10.4
+            VERSÃO v1.10.5
           </span>
         </div>
 

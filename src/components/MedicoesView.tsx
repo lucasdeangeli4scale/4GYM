@@ -326,7 +326,7 @@ export default function MedicoesView({
                 className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 rounded-xl text-[10px] text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Nova Peso</span>
+                <span>Novo Peso</span>
               </button>
             ) : (
               <button

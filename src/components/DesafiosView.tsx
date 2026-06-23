@@ -177,7 +177,7 @@ export default function DesafiosView({
 
     // Check achievements
     const firstWorkoutUnlocked = hasFirstStep;
-    const sevenDaysUnlocked = maxStreak >= 7 || memberPosts.length >= 7 || hasWeeklyConsistency;
+    const fiveDaysUnlocked = maxStreak >= 5 || memberPosts.length >= 5 || hasWeeklyConsistency;
     const fourteenDaysUnlocked = maxStreak >= 14 || memberPosts.length >= 14;
     const thirtyDaysUnlocked = maxStreak >= 30 || memberPosts.length >= 30;
     const ninetyDaysUnlocked = maxStreak >= 90 || memberPosts.length >= 90;
@@ -193,11 +193,11 @@ export default function DesafiosView({
         unlocked: firstWorkoutUnlocked,
       },
       {
-        id: "7_days",
-        title: "7 dias",
-        description: "1 semana consecutiva",
+        id: "5_days",
+        title: "5 dias",
+        description: "5 dias consecutivos",
         icon: "Flame",
-        unlocked: sevenDaysUnlocked,
+        unlocked: fiveDaysUnlocked,
       },
       {
         id: "14_days",
@@ -304,7 +304,7 @@ export default function DesafiosView({
         <div className="bg-violet-400/10 border border-violet-400/20 px-3 py-1 rounded-full flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
           <span className="text-[10px] font-bold font-mono text-violet-400">
-            SEMANA 3
+            SEMANA {Math.ceil(new Date().getDate() / 7)}
           </span>
         </div>
       </header>

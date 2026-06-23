@@ -703,12 +703,12 @@ export default function App() {
   const mockTeamGoalPercent = 72;
 
   return (
-    <div className="min-h-screen bg-[#060606] text-slate-100 flex items-center justify-center font-sans selection:bg-violet-500/20 selection:text-violet-300">
+    <div className="min-h-[100dvh] bg-[#0A0A0A] text-slate-100 font-sans selection:bg-violet-500/20 selection:text-violet-300">
       
-      {/* FOCUS CONTAINER: FULL SCREEN ON MOBILE & TABLET, CLASSIC CELL PHONE PROPORTIONS IN DESKTOP */}
+      {/* APP CONTAINER: FULL SCREEN, REMOVING SMARTPHONE FRAME */}
       <div 
-        className="w-full h-[100dvh] lg:h-[92dvh] lg:max-h-[880px] lg:max-w-[420px] bg-[#0A0A0A] lg:rounded-3xl lg:border lg:border-[#1E1E1E] lg:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] relative flex flex-col overflow-hidden"
-        id="smartphone-shell"
+        className="w-full max-w-[420px] mx-auto h-[100dvh] bg-[#0A0A0A] relative flex flex-col overflow-hidden"
+        id="app-container"
       >
         {useLocalFallback && permissionError && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-3 py-2.5 flex items-start gap-2.5 z-50">

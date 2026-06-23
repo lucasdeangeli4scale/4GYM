@@ -51,9 +51,9 @@ export const DEFAULT_TROPHIES: Trophy[] = [
     unlocked: false,
   },
   {
-    id: "7_days",
-    title: "7 dias",
-    description: "1 semana consecutiva",
+    id: "5_days",
+    title: "5 dias",
+    description: "5 dias consecutivos",
     icon: "Flame",
     unlocked: false,
   },
